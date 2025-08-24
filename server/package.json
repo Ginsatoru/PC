@@ -1,0 +1,36 @@
+{
+  "name": "pc-part-shop-backend",
+  "version": "1.0.0",
+  "description": "Backend API for PC Part Shop",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "seed": "node utils/seedData.js"
+  },
+  "keywords": [
+    "pc-parts",
+    "ecommerce",
+    "api",
+    "mongodb",
+    "express"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-async-handler": "^1.2.0",
+    "express-rate-limit": "^6.11.2",
+    "helmet": "^7.2.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongod": "^2.0.0",
+    "mongoose": "^7.5.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
