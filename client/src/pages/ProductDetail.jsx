@@ -1,12 +1,13 @@
-import { useState, useEffect, useContext } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { CartContext } from '../context/CartContext';
-import Loader from '../components/Loader';
+import { useState, useEffect, useContext } from "react";
+import { useParams, Link } from "react-router-dom";
+import { CartContext } from "../context/CartContext";
+import Loader from "../components/Loader";
+import api from "../utils/api"; // Import the configured API instance
 
 const ProductDetail = () => {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [addingToCart, setAddingToCart] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
@@ -21,16 +22,25 @@ const ProductDetail = () => {
   const fetchProduct = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/products/${id}`);
-      
-      if (response.ok) {
-        const data = await response.json();
-        setProduct(data);
+      console.log("Fetching product with ID:", id);
+
+      // FIXED: Use the configured API instance instead of raw fetch
+      const response = await api.get(`/products/${id}`);
+
+      console.log("Product API Response:", response.data);
+
+      if (response.data.success) {
+        setProduct(response.data.data);
       } else {
-        setError('Product not found');
+        setError("Product not found");
       }
     } catch (err) {
-      setError('Network error. Please try again.');
+      console.error("Error fetching product:", err);
+      if (err.response?.status === 404) {
+        setError("Product not found");
+      } else {
+        setError("Network error. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -43,7 +53,7 @@ const ProductDetail = () => {
       setAddedToCart(true);
       setTimeout(() => setAddedToCart(false), 2000);
     } catch (err) {
-      console.error('Error adding to cart:', err);
+      console.error("Error adding to cart:", err);
     } finally {
       setAddingToCart(false);
     }
@@ -83,12 +93,16 @@ const ProductDetail = () => {
         {/* Breadcrumb */}
         <nav className="mb-8">
           <div className="flex items-center space-x-2 text-sm text-gray-600">
-            <Link to="/" className="hover:text-blue-600">Home</Link>
+            <Link to="/" className="hover:text-blue-600">
+              Home
+            </Link>
             <span>/</span>
-            <Link to="/products" className="hover:text-blue-600">Products</Link>
+            <Link to="/products" className="hover:text-blue-600">
+              Products
+            </Link>
             <span>/</span>
-            <Link 
-              to={`/category/${product.category}`} 
+            <Link
+              to={`/category/${product.category}`}
               className="hover:text-blue-600 capitalize"
             >
               {product.category}
@@ -103,7 +117,7 @@ const ProductDetail = () => {
           <div className="space-y-4">
             <div className="aspect-square bg-white rounded-lg shadow-md p-8">
               <img
-                src={product.image || '/api/placeholder/600/600'}
+                src={product.image || "/api/placeholder/600/600"}
                 alt={product.name}
                 className="w-full h-full object-contain"
               />
@@ -137,8 +151,12 @@ const ProductDetail = () => {
                   </span>
                 )}
               </div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">{product.name}</h1>
-              <p className="text-lg text-gray-600">{product.brand} - {product.model}</p>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                {product.name}
+              </h1>
+              <p className="text-lg text-gray-600">
+                {product.brand} - {product.model}
+              </p>
             </div>
 
             <div className="border-t border-b border-gray-200 py-6">
@@ -146,17 +164,18 @@ const ProductDetail = () => {
                 <span className="text-4xl font-bold text-blue-600">
                   ${product.price?.toFixed(2)}
                 </span>
-                <span className="text-sm text-gray-500">
-                  + Free Shipping
-                </span>
+                <span className="text-sm text-gray-500">+ Free Shipping</span>
               </div>
             </div>
 
             <div className="space-y-4">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Description</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Description
+                </h3>
                 <p className="text-gray-700 leading-relaxed">
-                  {product.description || 'No description available for this product.'}
+                  {product.description ||
+                    "No description available for this product."}
                 </p>
               </div>
 
@@ -171,11 +190,15 @@ const ProductDetail = () => {
                 </div>
                 <div>
                   <span className="font-medium text-gray-900">Category:</span>
-                  <span className="ml-2 text-gray-600 capitalize">{product.category}</span>
+                  <span className="ml-2 text-gray-600 capitalize">
+                    {product.category}
+                  </span>
                 </div>
                 <div>
                   <span className="font-medium text-gray-900">Stock:</span>
-                  <span className="ml-2 text-gray-600">{product.stock} available</span>
+                  <span className="ml-2 text-gray-600">
+                    {product.stock} available
+                  </span>
                 </div>
               </div>
             </div>
@@ -185,7 +208,9 @@ const ProductDetail = () => {
               {product.stock > 0 ? (
                 <>
                   <div className="flex items-center space-x-4">
-                    <label className="text-sm font-medium text-gray-900">Quantity:</label>
+                    <label className="text-sm font-medium text-gray-900">
+                      Quantity:
+                    </label>
                     <div className="flex items-center border border-gray-300 rounded-lg">
                       <button
                         onClick={() => handleQuantityChange(quantity - 1)}
@@ -216,27 +241,51 @@ const ProductDetail = () => {
                       disabled={addingToCart || product.stock === 0}
                       className={`flex-1 py-3 px-6 rounded-lg font-medium text-white transition-colors ${
                         addedToCart
-                          ? 'bg-green-600 hover:bg-green-700'
-                          : 'bg-blue-600 hover:bg-blue-700'
+                          ? "bg-green-600 hover:bg-green-700"
+                          : "bg-blue-600 hover:bg-blue-700"
                       } disabled:opacity-50 disabled:cursor-not-allowed`}
                     >
                       {addingToCart ? (
                         <span className="flex items-center justify-center">
-                          <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          <svg
+                            className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            ></circle>
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            ></path>
                           </svg>
                           Adding...
                         </span>
                       ) : addedToCart ? (
                         <span className="flex items-center justify-center">
-                          <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          <svg
+                            className="w-5 h-5 mr-2"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                              clipRule="evenodd"
+                            />
                           </svg>
                           Added to Cart!
                         </span>
                       ) : (
-                        'Add to Cart'
+                        "Add to Cart"
                       )}
                     </button>
                     <Link
@@ -249,7 +298,9 @@ const ProductDetail = () => {
                 </>
               ) : (
                 <div className="text-center py-4">
-                  <p className="text-gray-600 mb-4">This product is currently out of stock.</p>
+                  <p className="text-gray-600 mb-4">
+                    This product is currently out of stock.
+                  </p>
                   <button className="bg-gray-400 text-white px-6 py-3 rounded-lg cursor-not-allowed">
                     Out of Stock
                   </button>
@@ -259,29 +310,63 @@ const ProductDetail = () => {
 
             {/* Features */}
             <div className="bg-gray-50 rounded-lg p-4">
-              <h3 className="font-semibold text-gray-900 mb-3">Why Choose This Product?</h3>
+              <h3 className="font-semibold text-gray-900 mb-3">
+                Why Choose This Product?
+              </h3>
               <ul className="space-y-2 text-sm text-gray-600">
                 <li className="flex items-center">
-                  <svg className="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  <svg
+                    className="w-4 h-4 text-green-500 mr-2"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                      clipRule="evenodd"
+                    />
                   </svg>
                   Free shipping on all orders
                 </li>
                 <li className="flex items-center">
-                  <svg className="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  <svg
+                    className="w-4 h-4 text-green-500 mr-2"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                      clipRule="evenodd"
+                    />
                   </svg>
                   30-day return policy
                 </li>
                 <li className="flex items-center">
-                  <svg className="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  <svg
+                    className="w-4 h-4 text-green-500 mr-2"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                      clipRule="evenodd"
+                    />
                   </svg>
                   Manufacturer warranty included
                 </li>
                 <li className="flex items-center">
-                  <svg className="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  <svg
+                    className="w-4 h-4 text-green-500 mr-2"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                      clipRule="evenodd"
+                    />
                   </svg>
                   24/7 customer support
                 </li>

@@ -1,26 +1,27 @@
-import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
-import ProductCard from '../components/ProductCard';
-import Loader from '../components/Loader';
+import { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
+import ProductCard from "../components/ProductCard";
+import Loader from "../components/Loader";
+import { productAPI } from "../utils/api"; // Add this import
 
 const Category = () => {
   const { category } = useParams();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [sortBy, setSortBy] = useState('name');
-  const [sortOrder, setSortOrder] = useState('asc');
+  const [error, setError] = useState("");
+  const [sortBy, setSortBy] = useState("name");
+  const [sortOrder, setSortOrder] = useState("asc");
 
   const categories = {
-    cpu: 'CPUs',
-    gpu: 'Graphics Cards',
-    ram: 'Memory (RAM)',
-    ssd: 'Storage (SSD)',
-    hdd: 'Storage (HDD)',
-    motherboard: 'Motherboards',
-    psu: 'Power Supplies',
-    case: 'PC Cases',
-    cooling: 'Cooling Solutions'
+    cpu: "CPUs",
+    gpu: "Graphics Cards",
+    ram: "Memory (RAM)",
+    ssd: "Storage (SSD)",
+    hdd: "Storage (HDD)",
+    motherboard: "Motherboards",
+    psu: "Power Supplies",
+    case: "PC Cases",
+    cooling: "Cooling Solutions",
   };
 
   useEffect(() => {
@@ -29,26 +30,80 @@ const Category = () => {
 
   const fetchProducts = async () => {
     setLoading(true);
+    setError("");
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/products?category=${category}&sortBy=${sortBy}&sortOrder=${sortOrder}`
-      );
-      
-      if (response.ok) {
-        const data = await response.json();
-        setProducts(data.products || data);
-      } else {
-        setError('Failed to fetch products');
+      console.log("Fetching products for category:", category); // Debug
+
+      // First, let's try getting ALL products to see if the API works
+      const allProductsResponse = await productAPI.getProducts({});
+      console.log("ALL products response:", allProductsResponse);
+
+      // Now try with category filter
+      const response = await productAPI.getProducts({
+        category: category, // Send as-is
+        sortBy,
+        sortOrder,
+      });
+
+      console.log("Filtered API Response:", response);
+      console.log("Response data:", response.data);
+      console.log("Response data.data:", response.data?.data);
+      console.log("Products array:", response.data?.data?.products);
+
+      // Extract products from the nested response structure
+      const productsData = response.data?.data?.products || [];
+
+      console.log("Final products data:", productsData);
+      console.log("Products count:", productsData.length);
+
+      setProducts(productsData);
+
+      // If no products found with category filter, let's also try different case variations
+      if (productsData.length === 0) {
+        console.log("No products found, trying different category formats...");
+
+        // Try uppercase
+        const upperResponse = await productAPI.getProducts({
+          category: category.toUpperCase(),
+          sortBy,
+          sortOrder,
+        });
+        console.log(
+          "Uppercase category response:",
+          upperResponse.data?.data?.products?.length || 0
+        );
+
+        // Try capitalized
+        const capitalizedCategory =
+          category.charAt(0).toUpperCase() + category.slice(1).toLowerCase();
+        const capitalResponse = await productAPI.getProducts({
+          category: capitalizedCategory,
+          sortBy,
+          sortOrder,
+        });
+        console.log(
+          "Capitalized category response:",
+          capitalResponse.data?.data?.products?.length || 0
+        );
+
+        // If any of these worked, use that result
+        if (upperResponse.data?.data?.products?.length > 0) {
+          setProducts(upperResponse.data.data.products);
+        } else if (capitalResponse.data?.data?.products?.length > 0) {
+          setProducts(capitalResponse.data.data.products);
+        }
       }
     } catch (err) {
-      setError('Network error. Please try again.');
+      console.error("Error fetching products:", err);
+      console.error("Error details:", err.response?.data);
+      setError("Failed to fetch products. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   const handleSortChange = (e) => {
-    const [field, order] = e.target.value.split('-');
+    const [field, order] = e.target.value.split("-");
     setSortBy(field);
     setSortOrder(order);
   };
@@ -66,13 +121,17 @@ const Category = () => {
                 {categories[category] || category.toUpperCase()}
               </h1>
               <p className="text-gray-600">
-                {products.length} product{products.length !== 1 ? 's' : ''} found
+                {products.length} product{products.length !== 1 ? "s" : ""}{" "}
+                found
               </p>
             </div>
-            
+
             {/* Sort Options */}
             <div className="flex items-center space-x-4">
-              <label htmlFor="sort" className="text-sm font-medium text-gray-700">
+              <label
+                htmlFor="sort"
+                className="text-sm font-medium text-gray-700"
+              >
                 Sort by:
               </label>
               <select
@@ -94,16 +153,18 @@ const Category = () => {
 
         {/* Category Navigation */}
         <div className="mb-8 bg-white rounded-lg shadow-sm p-4">
-          <h2 className="text-lg font-semibold text-gray-900 mb-3">Browse Categories</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-3">
+            Browse Categories
+          </h2>
           <div className="flex flex-wrap gap-2">
             {Object.entries(categories).map(([key, name]) => (
               <button
                 key={key}
-                onClick={() => window.location.href = `/category/${key}`}
+                onClick={() => (window.location.href = `/category/${key}`)}
                 className={`px-4 py-2 text-sm rounded-full border transition-colors ${
                   category === key
-                    ? 'bg-blue-600 text-white border-blue-600'
-                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                    ? "bg-blue-600 text-white border-blue-600"
+                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
                 }`}
               >
                 {name}
@@ -120,22 +181,33 @@ const Category = () => {
         )}
 
         {/* Products Grid */}
-        {products.length === 0 ? (
+        {!loading && products.length === 0 ? (
           <div className="text-center py-16">
             <div className="max-w-md mx-auto">
               <div className="mb-4">
-                <svg className="w-16 h-16 text-gray-400 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                <svg
+                  className="w-16 h-16 text-gray-400 mx-auto"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1}
+                    d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
+                  />
                 </svg>
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">
                 No products found
               </h3>
               <p className="text-gray-600 mb-6">
-                We don't have any products in the {categories[category] || category} category yet.
+                We don't have any products in the{" "}
+                {categories[category] || category} category yet.
               </p>
               <button
-                onClick={() => window.location.href = '/products'}
+                onClick={() => (window.location.href = "/products")}
                 className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
               >
                 Browse All Products
@@ -144,9 +216,10 @@ const Category = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {products.map((product) => (
-              <ProductCard key={product._id} product={product} />
-            ))}
+            {Array.isArray(products) &&
+              products.map((product) => (
+                <ProductCard key={product._id} product={product} />
+              ))}
           </div>
         )}
 
@@ -156,26 +229,54 @@ const Category = () => {
             About {categories[category] || category.toUpperCase()}
           </h2>
           <div className="text-gray-600 space-y-2">
-            {category === 'cpu' && (
-              <p>Discover high-performance processors from leading brands like Intel and AMD. Whether you're building a gaming rig or workstation, find the perfect CPU for your needs.</p>
+            {category === "cpu" && (
+              <p>
+                Discover high-performance processors from leading brands like
+                Intel and AMD. Whether you're building a gaming rig or
+                workstation, find the perfect CPU for your needs.
+              </p>
             )}
-            {category === 'gpu' && (
-              <p>Explore powerful graphics cards from NVIDIA and AMD. From budget-friendly options to high-end gaming and professional GPUs for the ultimate visual experience.</p>
+            {category === "gpu" && (
+              <p>
+                Explore powerful graphics cards from NVIDIA and AMD. From
+                budget-friendly options to high-end gaming and professional GPUs
+                for the ultimate visual experience.
+              </p>
             )}
-            {category === 'ram' && (
-              <p>Boost your system's performance with high-quality memory modules. Choose from various speeds, capacities, and form factors to optimize your build.</p>
+            {category === "ram" && (
+              <p>
+                Boost your system's performance with high-quality memory
+                modules. Choose from various speeds, capacities, and form
+                factors to optimize your build.
+              </p>
             )}
-            {category === 'ssd' && (
-              <p>Fast and reliable solid-state drives for lightning-quick boot times and file transfers. Available in various interfaces including SATA, NVMe, and M.2.</p>
+            {category === "ssd" && (
+              <p>
+                Fast and reliable solid-state drives for lightning-quick boot
+                times and file transfers. Available in various interfaces
+                including SATA, NVMe, and M.2.
+              </p>
             )}
-            {category === 'motherboard' && (
-              <p>The foundation of your PC build. Find compatible motherboards with the features you need, from basic builds to advanced enthusiast systems.</p>
+            {category === "motherboard" && (
+              <p>
+                The foundation of your PC build. Find compatible motherboards
+                with the features you need, from basic builds to advanced
+                enthusiast systems.
+              </p>
             )}
-            {category === 'psu' && (
-              <p>Reliable power supplies to keep your system running smoothly. Choose from efficient, modular, and high-wattage options for any build.</p>
+            {category === "psu" && (
+              <p>
+                Reliable power supplies to keep your system running smoothly.
+                Choose from efficient, modular, and high-wattage options for any
+                build.
+              </p>
             )}
             {!categories[category] && (
-              <p>Browse our selection of high-quality PC components and accessories. All products come with manufacturer warranty and fast shipping.</p>
+              <p>
+                Browse our selection of high-quality PC components and
+                accessories. All products come with manufacturer warranty and
+                fast shipping.
+              </p>
             )}
           </div>
         </div>

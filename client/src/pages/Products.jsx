@@ -1,30 +1,38 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import ProductCard from '../components/ProductCard';
-import Loader from '../components/Loader';
-import api from '../utils/api';
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import ProductCard from "../components/ProductCard";
+import Loader from "../components/Loader";
+import api from "../utils/api";
 
 const Products = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [sortBy, setSortBy] = useState('name');
-  const [sortOrder, setSortOrder] = useState('asc');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [sortBy, setSortBy] = useState("name");
+  const [sortOrder, setSortOrder] = useState("asc");
 
   const categories = [
-    'CPU', 'GPU', 'RAM', 'SSD', 'HDD', 'Motherboard', 
-    'Power Supply', 'Cooling', 'Case', 'Monitor'
+    "CPU",
+    "GPU",
+    "RAM",
+    "SSD",
+    "HDD",
+    "Motherboard",
+    "Power Supply",
+    "Cooling",
+    "Case",
+    "Monitor",
   ];
 
   const sortOptions = [
-    { value: 'name', label: 'Name' },
-    { value: 'price', label: 'Price' },
-    { value: 'brand', label: 'Brand' },
-    { value: 'createdAt', label: 'Newest' }
+    { value: "name", label: "Name" },
+    { value: "price", label: "Price" },
+    { value: "brand", label: "Brand" },
+    { value: "createdAt", label: "Newest" },
   ];
 
   const productsPerPage = 12;
@@ -36,34 +44,55 @@ const Products = () => {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      setError('');
+      setError("");
 
       const params = new URLSearchParams({
         page: currentPage.toString(),
         limit: productsPerPage.toString(),
         sortBy,
-        sortOrder
+        sortOrder,
       });
 
       if (searchTerm.trim()) {
-        params.append('search', searchTerm.trim());
+        params.append("search", searchTerm.trim());
       }
 
       if (selectedCategory) {
-        params.append('category', selectedCategory);
+        params.append("category", selectedCategory);
       }
 
+      console.log("🔍 Fetching with params:", params.toString());
+      console.log(
+        "📡 Full URL will be:",
+        `${import.meta.env.VITE_API_URL}/api/products?${params.toString()}`
+      );
+
+      // FIXED: Changed from /api/products to /products since /api is in baseURL now
       const response = await api.get(`/products?${params.toString()}`);
-      
+
+      // DEBUG LOGS - Add these to see what's happening
+      console.log("✅ Full API Response:", response);
+      console.log("📊 Response data:", response.data);
+      console.log("✔️ Success status:", response.data.success);
+      console.log("📦 Products array:", response.data.data?.products);
+      console.log("📈 Products length:", response.data.data?.products?.length);
+      console.log("🎯 First product:", response.data.data?.products?.[0]);
+      console.log("📄 Total pages:", response.data.data?.totalPages);
+
       if (response.data.success) {
-        setProducts(response.data.data.products);
+        const productsData = response.data.data.products;
+        console.log("🔄 Setting products to:", productsData);
+        setProducts(productsData);
         setTotalPages(response.data.data.totalPages);
       } else {
-        setError('Failed to fetch products');
+        console.error("❌ API returned success: false");
+        setError("Failed to fetch products");
       }
     } catch (error) {
-      console.error('Error fetching products:', error);
-      setError(error.response?.data?.message || 'Failed to fetch products');
+      console.error("💥 Error fetching products:", error);
+      console.error("💥 Error response:", error.response);
+      console.error("💥 Error message:", error.message);
+      setError(error.response?.data?.message || "Failed to fetch products");
     } finally {
       setLoading(false);
     }
@@ -76,29 +105,32 @@ const Products = () => {
   };
 
   const handleCategoryChange = (category) => {
-    setSelectedCategory(category === selectedCategory ? '' : category);
+    setSelectedCategory(category === selectedCategory ? "" : category);
     setCurrentPage(1);
   };
 
   const handleSortChange = (field) => {
     if (sortBy === field) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
     } else {
       setSortBy(field);
-      setSortOrder('asc');
+      setSortOrder("asc");
     }
     setCurrentPage(1);
   };
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const renderPagination = () => {
     const pages = [];
     const maxVisiblePages = 5;
-    const startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+    const startPage = Math.max(
+      1,
+      currentPage - Math.floor(maxVisiblePages / 2)
+    );
     const endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
 
     if (startPage > 1) {
@@ -112,7 +144,11 @@ const Products = () => {
         </button>
       );
       if (startPage > 2) {
-        pages.push(<span key="dots1" className="px-2">...</span>);
+        pages.push(
+          <span key="dots1" className="px-2">
+            ...
+          </span>
+        );
       }
     }
 
@@ -123,8 +159,8 @@ const Products = () => {
           onClick={() => handlePageChange(i)}
           className={`px-3 py-2 mx-1 border rounded ${
             currentPage === i
-              ? 'bg-blue-600 text-white border-blue-600'
-              : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+              ? "bg-blue-600 text-white border-blue-600"
+              : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
           }`}
         >
           {i}
@@ -134,7 +170,11 @@ const Products = () => {
 
     if (endPage < totalPages) {
       if (endPage < totalPages - 1) {
-        pages.push(<span key="dots2" className="px-2">...</span>);
+        pages.push(
+          <span key="dots2" className="px-2">
+            ...
+          </span>
+        );
       }
       pages.push(
         <button
@@ -150,6 +190,12 @@ const Products = () => {
     return pages;
   };
 
+  // DEBUG LOGS for render
+  console.log("🎨 Rendering with products state:", products);
+  console.log("📏 Products array length:", products.length);
+  console.log("⏳ Loading state:", loading);
+  console.log("❌ Error state:", error);
+
   if (loading && currentPage === 1) {
     return <Loader />;
   }
@@ -159,7 +205,9 @@ const Products = () => {
       <div className="container mx-auto px-4">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-4">All Products</h1>
+          <h1 className="text-3xl font-bold text-gray-800 mb-4">
+            All Products
+          </h1>
           <p className="text-gray-600">
             Discover the latest PC parts and components for your build
           </p>
@@ -198,8 +246,8 @@ const Products = () => {
                   onClick={() => handleCategoryChange(category)}
                   className={`px-3 py-1 rounded-full text-sm transition duration-200 ${
                     selectedCategory === category
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-200 text-gray-700 hover:bg-gray-300"
                   }`}
                 >
                   {category}
@@ -217,14 +265,14 @@ const Products = () => {
                 onClick={() => handleSortChange(option.value)}
                 className={`px-3 py-1 rounded text-sm transition duration-200 ${
                   sortBy === option.value
-                    ? 'bg-blue-100 text-blue-800'
-                    : 'text-gray-600 hover:text-blue-600'
+                    ? "bg-blue-100 text-blue-800"
+                    : "text-gray-600 hover:text-blue-600"
                 }`}
               >
                 {option.label}
                 {sortBy === option.value && (
                   <span className="ml-1">
-                    {sortOrder === 'asc' ? '↑' : '↓'}
+                    {sortOrder === "asc" ? "↑" : "↓"}
                   </span>
                 )}
               </button>
@@ -236,13 +284,15 @@ const Products = () => {
         {(searchTerm || selectedCategory) && (
           <div className="bg-blue-50 p-4 rounded-lg mb-6">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm font-medium text-blue-800">Active filters:</span>
+              <span className="text-sm font-medium text-blue-800">
+                Active filters:
+              </span>
               {searchTerm && (
                 <span className="px-2 py-1 bg-blue-200 text-blue-800 rounded text-sm">
                   Search: "{searchTerm}"
                   <button
                     onClick={() => {
-                      setSearchTerm('');
+                      setSearchTerm("");
                       setCurrentPage(1);
                     }}
                     className="ml-1 text-blue-600 hover:text-blue-800"
@@ -256,7 +306,7 @@ const Products = () => {
                   Category: {selectedCategory}
                   <button
                     onClick={() => {
-                      setSelectedCategory('');
+                      setSelectedCategory("");
                       setCurrentPage(1);
                     }}
                     className="ml-1 text-blue-600 hover:text-blue-800"
@@ -267,8 +317,8 @@ const Products = () => {
               )}
               <button
                 onClick={() => {
-                  setSearchTerm('');
-                  setSelectedCategory('');
+                  setSearchTerm("");
+                  setSelectedCategory("");
                   setCurrentPage(1);
                 }}
                 className="px-2 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
@@ -293,17 +343,19 @@ const Products = () => {
           </div>
         ) : products.length === 0 ? (
           <div className="bg-white p-8 rounded-lg shadow-md text-center">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">No Products Found</h2>
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">
+              No Products Found
+            </h2>
             <p className="text-gray-600 mb-4">
               {searchTerm || selectedCategory
-                ? 'Try adjusting your search criteria or filters'
-                : 'No products are available at the moment'}
+                ? "Try adjusting your search criteria or filters"
+                : "No products are available at the moment"}
             </p>
             {(searchTerm || selectedCategory) && (
               <button
                 onClick={() => {
-                  setSearchTerm('');
-                  setSelectedCategory('');
+                  setSearchTerm("");
+                  setSelectedCategory("");
                   setCurrentPage(1);
                 }}
                 className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
@@ -311,6 +363,17 @@ const Products = () => {
                 View All Products
               </button>
             )}
+            {/* DEBUG INFO */}
+            <div className="mt-4 p-2 bg-gray-100 rounded text-left text-xs">
+              <p>
+                <strong>Debug Info:</strong>
+              </p>
+              <p>Products array length: {products.length}</p>
+              <p>Loading: {loading.toString()}</p>
+              <p>Error: {error || "none"}</p>
+              <p>Current page: {currentPage}</p>
+              <p>Total pages: {totalPages}</p>
+            </div>
           </div>
         ) : (
           <>
@@ -330,9 +393,9 @@ const Products = () => {
                 >
                   Previous
                 </button>
-                
+
                 {renderPagination()}
-                
+
                 <button
                   onClick={() => handlePageChange(currentPage + 1)}
                   disabled={currentPage === totalPages}
@@ -345,8 +408,9 @@ const Products = () => {
 
             {/* Results Info */}
             <div className="text-center mt-4 text-gray-600">
-              Showing {(currentPage - 1) * productsPerPage + 1} to{' '}
-              {Math.min(currentPage * productsPerPage, products.length)} of {products.length} products
+              Showing {(currentPage - 1) * productsPerPage + 1} to{" "}
+              {Math.min(currentPage * productsPerPage, products.length)} of{" "}
+              {products.length} products
               {totalPages > 1 && ` (Page ${currentPage} of ${totalPages})`}
             </div>
           </>

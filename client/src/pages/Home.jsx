@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { productAPI } from '../utils/api';
-import ProductCard from '../components/ProductCard';
-import Loader from '../components/Loader';
-import { FiArrowRight, FiCpu, FiHardDrive, FiMonitor } from 'react-icons/fi';
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { productAPI } from "../utils/api";
+import ProductCard from "../components/ProductCard";
+import Loader from "../components/Loader";
+import { FiArrowRight, FiCpu, FiHardDrive, FiMonitor } from "react-icons/fi";
 
 const Home = () => {
   const [featuredProducts, setFeaturedProducts] = useState([]);
@@ -14,9 +14,11 @@ const Home = () => {
     const fetchFeaturedProducts = async () => {
       try {
         const response = await productAPI.getFeaturedProducts();
-        setFeaturedProducts(response.data);
+        // Fixed: Access response.data.data since API now returns { success: true, data: products }
+        setFeaturedProducts(response.data.data || []);
       } catch (err) {
-        setError(err.response?.data?.message || 'Failed to load products');
+        console.error("Error fetching featured products:", err);
+        setError(err.response?.data?.message || "Failed to load products");
       } finally {
         setLoading(false);
       }
@@ -27,25 +29,25 @@ const Home = () => {
 
   const categories = [
     {
-      name: 'CPUs & Processors',
+      name: "CPUs & Processors",
       icon: FiCpu,
-      slug: 'CPU',
-      description: 'High-performance processors for gaming and productivity',
-      color: 'bg-blue-500',
+      slug: "CPU",
+      description: "High-performance processors for gaming and productivity",
+      color: "bg-blue-500",
     },
     {
-      name: 'Graphics Cards',
+      name: "Graphics Cards",
       icon: FiMonitor,
-      slug: 'GPU',
-      description: 'Powerful GPUs for gaming and content creation',
-      color: 'bg-green-500',
+      slug: "GPU",
+      description: "Powerful GPUs for gaming and content creation",
+      color: "bg-green-500",
     },
     {
-      name: 'Storage & Memory',
+      name: "Storage & Memory",
       icon: FiHardDrive,
-      slug: 'SSD',
-      description: 'Fast SSDs and reliable storage solutions',
-      color: 'bg-purple-500',
+      slug: "SSD",
+      description: "Fast SSDs and reliable storage solutions",
+      color: "bg-purple-500",
     },
   ];
 
@@ -59,7 +61,8 @@ const Home = () => {
               Build Your Dream PC
             </h1>
             <p className="text-xl md:text-2xl mb-8 text-primary-100">
-              Premium PC components and parts for enthusiasts, gamers, and professionals
+              Premium PC components and parts for enthusiasts, gamers, and
+              professionals
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
@@ -87,10 +90,11 @@ const Home = () => {
               Shop by Category
             </h2>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Find the perfect components for your build from our extensive selection
+              Find the perfect components for your build from our extensive
+              selection
             </p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {categories.map((category) => {
               const IconComponent = category.icon;
@@ -100,15 +104,15 @@ const Home = () => {
                   to={`/category/${category.slug}`}
                   className="group bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 p-8 text-center"
                 >
-                  <div className={`${category.color} w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform`}>
+                  <div
+                    className={`${category.color} w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform`}
+                  >
                     <IconComponent className="w-8 h-8 text-white" />
                   </div>
                   <h3 className="text-xl font-semibold text-gray-900 mb-2 group-hover:text-primary-600 transition-colors">
                     {category.name}
                   </h3>
-                  <p className="text-gray-600 mb-4">
-                    {category.description}
-                  </p>
+                  <p className="text-gray-600 mb-4">{category.description}</p>
                   <span className="inline-flex items-center text-primary-600 font-medium">
                     Browse {category.name}
                     <FiArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -156,14 +160,27 @@ const Home = () => {
           ) : (
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {featuredProducts.slice(0, 8).map((product) => (
-                  <ProductCard key={product._id} product={product} />
-                ))}
+                {featuredProducts && featuredProducts.length > 0
+                  ? featuredProducts
+                      .slice(0, 8)
+                      .map((product) => (
+                        <ProductCard key={product._id} product={product} />
+                      ))
+                  : null}
               </div>
-              
-              {featuredProducts.length === 0 && (
+
+              {(!featuredProducts || featuredProducts.length === 0) && (
                 <div className="text-center py-12">
-                  <p className="text-gray-600">No featured products available at the moment.</p>
+                  <p className="text-gray-600">
+                    No featured products available at the moment.
+                  </p>
+                  <Link
+                    to="/products"
+                    className="btn btn-primary mt-4 inline-flex items-center"
+                  >
+                    Browse All Products
+                    <FiArrowRight className="ml-2 w-4 h-4" />
+                  </Link>
                 </div>
               )}
             </>
@@ -192,7 +209,7 @@ const Home = () => {
               We're committed to providing the best PC building experience
             </p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="text-center">
               <div className="bg-primary-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -205,7 +222,7 @@ const Home = () => {
                 Only the highest quality components from trusted brands
               </p>
             </div>
-            
+
             <div className="text-center">
               <div className="bg-primary-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                 <FiHardDrive className="w-8 h-8 text-primary-600" />
@@ -217,7 +234,7 @@ const Home = () => {
                 Quick and secure delivery to get your build started sooner
               </p>
             </div>
-            
+
             <div className="text-center">
               <div className="bg-primary-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                 <FiMonitor className="w-8 h-8 text-primary-600" />

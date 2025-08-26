@@ -31,9 +31,11 @@ const UserDashboard = () => {
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/orders/user');
-      if (response.data.success) {
-        setOrders(response.data.data);
+      // Fixed endpoint: /orders/myorders instead of /orders/user
+      const response = await api.get('/orders/myorders');
+      // Backend returns { orders: [], pagination: {} } format
+      if (response.data && response.data.orders) {
+        setOrders(response.data.orders);
       }
     } catch (error) {
       console.error('Error fetching orders:', error);
@@ -290,14 +292,16 @@ const UserDashboard = () => {
                         {new Date(order.createdAt).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {order.items.length} item{order.items.length !== 1 ? 's' : ''}
+                        {/* Fixed: use orderItems instead of items */}
+                        {order.orderItems?.length || 0} item{(order.orderItems?.length || 0) !== 1 ? 's' : ''}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
-                        ${order.totalAmount.toFixed(2)}
+                        {/* Fixed: use totalPrice instead of totalAmount */}
+                        ${(order.totalPrice || 0).toFixed(2)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
-                          {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                          {order.status?.charAt(0).toUpperCase() + order.status?.slice(1)}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -342,7 +346,7 @@ const UserDashboard = () => {
                     <div>
                       <p className="text-sm text-gray-600">Status</p>
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedOrder.status)}`}>
-                        {selectedOrder.status.charAt(0).toUpperCase() + selectedOrder.status.slice(1)}
+                        {selectedOrder.status?.charAt(0).toUpperCase() + selectedOrder.status?.slice(1)}
                       </span>
                     </div>
                   </div>
@@ -350,43 +354,44 @@ const UserDashboard = () => {
                   <div>
                     <h4 className="font-medium mb-2">Shipping Address</h4>
                     <div className="bg-gray-50 p-3 rounded">
-                      <p className="text-sm">{selectedOrder.shippingAddress.fullName}</p>
-                      <p className="text-sm">{selectedOrder.shippingAddress.address}</p>
+                      <p className="text-sm">{selectedOrder.shippingAddress?.name}</p>
+                      <p className="text-sm">{selectedOrder.shippingAddress?.address}</p>
                       <p className="text-sm">
-                        {selectedOrder.shippingAddress.city}, {selectedOrder.shippingAddress.postalCode}
+                        {selectedOrder.shippingAddress?.city}, {selectedOrder.shippingAddress?.postalCode}
                       </p>
-                      <p className="text-sm">{selectedOrder.shippingAddress.country}</p>
-                      <p className="text-sm">{selectedOrder.shippingAddress.email}</p>
-                      <p className="text-sm">{selectedOrder.shippingAddress.phone}</p>
+                      <p className="text-sm">{selectedOrder.shippingAddress?.country}</p>
+                      <p className="text-sm">{selectedOrder.shippingAddress?.phone}</p>
                     </div>
                   </div>
 
                   <div>
                     <h4 className="font-medium mb-2">Order Items</h4>
                     <div className="space-y-2">
-                      {selectedOrder.items.map((item, index) => (
+                      {/* Fixed: use orderItems instead of items */}
+                      {selectedOrder.orderItems?.map((item, index) => (
                         <div key={index} className="flex justify-between items-center bg-gray-50 p-3 rounded">
                           <div className="flex items-center">
                             <img 
-                              src={item.product?.image || '/placeholder-image.jpg'} 
-                              alt={item.product?.name || 'Product'}
+                              src={item.image || '/placeholder-image.jpg'} 
+                              alt={item.name || 'Product'}
                               className="w-12 h-12 object-cover rounded mr-3"
                             />
                             <div>
-                              <p className="font-medium">{item.product?.name || 'Product'}</p>
+                              <p className="font-medium">{item.name || 'Product'}</p>
                               <p className="text-sm text-gray-600">Qty: {item.quantity}</p>
                             </div>
                           </div>
                           <p className="font-medium">${(item.price * item.quantity).toFixed(2)}</p>
                         </div>
-                      ))}
+                      )) || []}
                     </div>
                   </div>
 
                   <div className="border-t pt-4">
                     <div className="flex justify-between items-center text-lg font-semibold">
                       <span>Total Amount:</span>
-                      <span>${selectedOrder.totalAmount.toFixed(2)}</span>
+                      {/* Fixed: use totalPrice instead of totalAmount */}
+                      <span>${(selectedOrder.totalPrice || 0).toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
@@ -400,7 +405,8 @@ const UserDashboard = () => {
 
   const renderAccountStats = () => {
     const totalOrders = orders.length;
-    const totalSpent = orders.reduce((sum, order) => sum + order.totalAmount, 0);
+    // Fixed: use totalPrice instead of totalAmount
+    const totalSpent = orders.reduce((sum, order) => sum + (order.totalPrice || 0), 0);
     const pendingOrders = orders.filter(order => order.status === 'pending').length;
     const completedOrders = orders.filter(order => order.status === 'delivered').length;
 

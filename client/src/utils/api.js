@@ -1,24 +1,25 @@
-import axios from 'axios';
-import toast from 'react-hot-toast';
+import axios from "axios";
+import toast from "react-hot-toast";
 
 // Get API URL from environment or use default
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
-console.log('API_URL:', API_URL); // Debug log to check the URL
+console.log("API_URL from env:", import.meta.env.VITE_API_URL);
+console.log("Final API_URL:", API_URL);
 
-// Create axios instance
+// Create axios instance - FIXED: Added /api to baseURL
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL: `${API_URL}/api`,
   timeout: 10000,
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
 // Request interceptor to add auth token
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -34,91 +35,94 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error('API Error:', error); // Debug log
-    
+    console.error("API Error:", error); // Debug log
+
     if (error.response) {
-      const message = error.response.data.message || 'An error occurred';
-      
+      const message = error.response.data.message || "An error occurred";
+
       // Handle specific error codes
       if (error.response.status === 401) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        window.location.href = '/login';
-        toast.error('Session expired. Please login again.');
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        window.location.href = "/login";
+        toast.error("Session expired. Please login again.");
       } else if (error.response.status === 403) {
-        toast.error('Access denied.');
+        toast.error("Access denied.");
       } else if (error.response.status >= 500) {
-        toast.error('Server error. Please try again later.');
+        toast.error("Server error. Please try again later.");
       } else {
         toast.error(message);
       }
     } else if (error.request) {
-      toast.error('Network error. Please check your connection.');
+      toast.error("Network error. Please check your connection.");
     } else {
-      toast.error('An unexpected error occurred.');
+      toast.error("An unexpected error occurred.");
     }
-    
+
     return Promise.reject(error);
   }
 );
 
-// Auth API calls
+// Auth API calls - UPDATED: Removed /api prefix since it's in baseURL
 export const authAPI = {
   login: (credentials) => {
-    console.log('Login attempt with:', credentials.email); // Debug log
-    return api.post('/api/auth/login', credentials);
+    console.log("Login attempt with:", credentials.email); // Debug log
+    return api.post("/auth/login", credentials);
   },
-  register: (userData) => api.post('/api/auth/register', userData),
-  getProfile: () => api.get('/api/auth/profile'),
-  updateProfile: (userData) => api.put('/api/auth/profile', userData),
-  getUsers: () => api.get('/api/auth/users'),
-  deleteUser: (id) => api.delete(`/api/auth/users/${id}`),
+  register: (userData) => api.post("/auth/register", userData),
+  getProfile: () => api.get("/auth/profile"),
+  updateProfile: (userData) => api.put("/auth/profile", userData),
+  getUsers: () => api.get("/auth/users"),
+  deleteUser: (id) => api.delete(`/auth/users/${id}`),
 };
 
-// Product API calls
+// Product API calls - UPDATED: Removed /api prefix since it's in baseURL
 export const productAPI = {
-  getProducts: (params = {}) => api.get('/api/products', { params }),
-  getFeaturedProducts: () => api.get('/api/products/featured'),
-  getCategories: () => api.get('/api/products/categories'),
-  getBrands: () => api.get('/api/products/brands'),
-  getProductById: (id) => api.get(`/api/products/${id}`),
-  createProduct: (productData) => api.post('/api/products', productData),
-  updateProduct: (id, productData) => api.put(`/api/products/${id}`, productData),
-  deleteProduct: (id) => api.delete(`/api/products/${id}`),
-  createReview: (id, reviewData) => api.post(`/api/products/${id}/reviews`, reviewData),
+  getProducts: (params = {}) => api.get("/products", { params }),
+  getFeaturedProducts: () => api.get("/products/featured"),
+  getCategories: () => api.get("/products/categories"),
+  getBrands: () => api.get("/products/brands"),
+  getProductById: (id) => api.get(`/products/${id}`),
+  createProduct: (productData) => api.post("/products", productData),
+  updateProduct: (id, productData) => api.put(`/products/${id}`, productData),
+  deleteProduct: (id) => api.delete(`/products/${id}`),
+  createReview: (id, reviewData) =>
+    api.post(`/products/${id}/reviews`, reviewData),
 };
 
-// Order API calls
+// Order API calls - UPDATED: Removed /api prefix since it's in baseURL
 export const orderAPI = {
-  createOrder: (orderData) => api.post('/api/orders', orderData),
-  getOrderById: (id) => api.get(`/api/orders/${id}`),
-  getMyOrders: (params = {}) => api.get('/api/orders/myorders', { params }),
-  getOrders: (params = {}) => api.get('/api/orders', { params }),
-  updateOrderToPaid: (id, paymentResult) => api.put(`/api/orders/${id}/pay`, paymentResult),
-  updateOrderToDelivered: (id) => api.put(`/api/orders/${id}/deliver`),
-  updateOrderStatus: (id, statusData) => api.put(`/api/orders/${id}/status`, statusData),
-  deleteOrder: (id) => api.delete(`/api/orders/${id}`),
-  getOrderStats: () => api.get('/api/orders/stats'),
+  createOrder: (orderData) => api.post("/orders", orderData),
+  getOrderById: (id) => api.get(`/orders/${id}`),
+  getMyOrders: (params = {}) => api.get("/orders/myorders", { params }),
+  getOrders: (params = {}) => api.get("/orders", { params }),
+  updateOrderToPaid: (id, paymentResult) =>
+    api.put(`/orders/${id}/pay`, paymentResult),
+  updateOrderToDelivered: (id) => api.put(`/orders/${id}/deliver`),
+  updateOrderStatus: (id, statusData) =>
+    api.put(`/orders/${id}/status`, statusData),
+  deleteOrder: (id) => api.delete(`/orders/${id}`),
+  getOrderStats: () => api.get("/orders/stats"),
 };
 
 // Generic API helper functions
 export const handleApiError = (error) => {
-  console.error('API Error:', error);
-  return error.response?.data || { message: 'An error occurred' };
+  console.error("API Error:", error);
+  return error.response?.data || { message: "An error occurred" };
 };
 
 export const formatPrice = (price) => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
   }).format(price);
 };
 
 export const formatDate = (date) => {
-  return new Date(date).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
+  return new Date(date).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
   });
 };
 

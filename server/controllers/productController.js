@@ -1,5 +1,5 @@
-import Product from '../models/Product.js';
-import { asyncHandler } from '../middleware/errorMiddleware.js';
+import Product from "../models/Product.js";
+import { asyncHandler } from "../middleware/errorMiddleware.js";
 
 // @desc    Get all products with pagination and filtering
 // @route   GET /api/products
@@ -14,12 +14,12 @@ export const getProducts = asyncHandler(async (req, res) => {
 
   // Category filter
   if (req.query.category) {
-    query.category = req.query.category;
+    query.category = new RegExp(req.query.category, "i");
   }
 
   // Brand filter
   if (req.query.brand) {
-    query.brand = new RegExp(req.query.brand, 'i');
+    query.brand = new RegExp(req.query.brand, "i");
   }
 
   // Price range filter
@@ -31,23 +31,51 @@ export const getProducts = asyncHandler(async (req, res) => {
 
   // Search functionality
   if (req.query.search) {
-    query.$text = { $search: req.query.search };
+    query.$or = [
+      { name: { $regex: req.query.search, $options: "i" } },
+      { description: { $regex: req.query.search, $options: "i" } },
+      { brand: { $regex: req.query.search, $options: "i" } },
+      { category: { $regex: req.query.search, $options: "i" } },
+    ];
   }
 
-  // Sort options
+  // Sort options - Updated to match frontend expectations
   let sortOptions = { createdAt: -1 };
-  if (req.query.sort) {
+  const sortBy = req.query.sortBy;
+  const sortOrder = req.query.sortOrder === "desc" ? -1 : 1;
+
+  if (sortBy) {
+    switch (sortBy) {
+      case "name":
+        sortOptions = { name: sortOrder };
+        break;
+      case "price":
+        sortOptions = { price: sortOrder };
+        break;
+      case "brand":
+        sortOptions = { brand: sortOrder };
+        break;
+      case "createdAt":
+        sortOptions = { createdAt: sortOrder };
+        break;
+      default:
+        sortOptions = { createdAt: -1 };
+    }
+  }
+
+  // Handle legacy sort parameter
+  if (req.query.sort && !sortBy) {
     switch (req.query.sort) {
-      case 'price_low':
+      case "price_low":
         sortOptions = { price: 1 };
         break;
-      case 'price_high':
+      case "price_high":
         sortOptions = { price: -1 };
         break;
-      case 'name_asc':
+      case "name_asc":
         sortOptions = { name: 1 };
         break;
-      case 'name_desc':
+      case "name_desc":
         sortOptions = { name: -1 };
         break;
       default:
@@ -62,14 +90,24 @@ export const getProducts = asyncHandler(async (req, res) => {
     .lean();
 
   const total = await Product.countDocuments(query);
+  const totalPages = Math.ceil(total / limit);
 
+  // Fixed response format to match frontend expectations
   res.json({
-    products,
+    success: true,
+    data: {
+      products,
+      totalPages,
+      currentPage: page,
+      totalProducts: total,
+      hasNextPage: page < totalPages,
+      hasPrevPage: page > 1,
+    },
     pagination: {
       page,
       limit,
       total,
-      pages: Math.ceil(total / limit),
+      pages: totalPages,
     },
   });
 });
@@ -82,23 +120,32 @@ export const getFeaturedProducts = asyncHandler(async (req, res) => {
     .limit(8)
     .lean();
 
-  res.json(products);
+  res.json({
+    success: true,
+    data: products,
+  });
 });
 
 // @desc    Get product categories
 // @route   GET /api/products/categories
 // @access  Public
 export const getCategories = asyncHandler(async (req, res) => {
-  const categories = await Product.distinct('category', { isActive: true });
-  res.json(categories);
+  const categories = await Product.distinct("category", { isActive: true });
+  res.json({
+    success: true,
+    data: categories,
+  });
 });
 
 // @desc    Get product brands
 // @route   GET /api/products/brands
 // @access  Public
 export const getBrands = asyncHandler(async (req, res) => {
-  const brands = await Product.distinct('brand', { isActive: true });
-  res.json(brands);
+  const brands = await Product.distinct("brand", { isActive: true });
+  res.json({
+    success: true,
+    data: brands,
+  });
 });
 
 // @desc    Get single product
@@ -106,14 +153,20 @@ export const getBrands = asyncHandler(async (req, res) => {
 // @access  Public
 export const getProductById = asyncHandler(async (req, res) => {
   const product = await Product.findById(req.params.id).populate({
-    path: 'reviews.user',
-    select: 'name',
+    path: "reviews.user",
+    select: "name",
   });
 
   if (product && product.isActive) {
-    res.json(product);
+    res.json({
+      success: true,
+      data: product,
+    });
   } else {
-    res.status(404).json({ message: 'Product not found' });
+    res.status(404).json({
+      success: false,
+      message: "Product not found",
+    });
   }
 });
 
@@ -137,7 +190,10 @@ export const createProduct = asyncHandler(async (req, res) => {
 
   // Validation
   if (!name || !category || !brand || !model || !price || !description) {
-    return res.status(400).json({ message: 'Please provide all required fields' });
+    return res.status(400).json({
+      success: false,
+      message: "Please provide all required fields",
+    });
   }
 
   const product = new Product({
@@ -149,13 +205,17 @@ export const createProduct = asyncHandler(async (req, res) => {
     stock: stock || 0,
     description,
     specifications,
-    image: image || 'https://via.placeholder.com/400x300?text=PC+Part',
+    image: image || "https://via.placeholder.com/400x300?text=PC+Part",
     images: images || [],
     featured: featured || false,
   });
 
   const createdProduct = await product.save();
-  res.status(201).json(createdProduct);
+  res.status(201).json({
+    success: true,
+    data: createdProduct,
+    message: "Product created successfully",
+  });
 });
 
 // @desc    Update a product (Admin only)
@@ -169,19 +229,30 @@ export const updateProduct = asyncHandler(async (req, res) => {
     product.category = req.body.category || product.category;
     product.brand = req.body.brand || product.brand;
     product.model = req.body.model || product.model;
-    product.price = req.body.price !== undefined ? req.body.price : product.price;
-    product.stock = req.body.stock !== undefined ? req.body.stock : product.stock;
+    product.price =
+      req.body.price !== undefined ? req.body.price : product.price;
+    product.stock =
+      req.body.stock !== undefined ? req.body.stock : product.stock;
     product.description = req.body.description || product.description;
     product.specifications = req.body.specifications || product.specifications;
     product.image = req.body.image || product.image;
     product.images = req.body.images || product.images;
-    product.featured = req.body.featured !== undefined ? req.body.featured : product.featured;
-    product.isActive = req.body.isActive !== undefined ? req.body.isActive : product.isActive;
+    product.featured =
+      req.body.featured !== undefined ? req.body.featured : product.featured;
+    product.isActive =
+      req.body.isActive !== undefined ? req.body.isActive : product.isActive;
 
     const updatedProduct = await product.save();
-    res.json(updatedProduct);
+    res.json({
+      success: true,
+      data: updatedProduct,
+      message: "Product updated successfully",
+    });
   } else {
-    res.status(404).json({ message: 'Product not found' });
+    res.status(404).json({
+      success: false,
+      message: "Product not found",
+    });
   }
 });
 
@@ -193,9 +264,15 @@ export const deleteProduct = asyncHandler(async (req, res) => {
 
   if (product) {
     await product.deleteOne();
-    res.json({ message: 'Product removed' });
+    res.json({
+      success: true,
+      message: "Product removed successfully",
+    });
   } else {
-    res.status(404).json({ message: 'Product not found' });
+    res.status(404).json({
+      success: false,
+      message: "Product not found",
+    });
   }
 });
 
@@ -212,7 +289,10 @@ export const createProductReview = asyncHandler(async (req, res) => {
     );
 
     if (alreadyReviewed) {
-      return res.status(400).json({ message: 'Product already reviewed' });
+      return res.status(400).json({
+        success: false,
+        message: "Product already reviewed",
+      });
     }
 
     const review = {
@@ -224,12 +304,19 @@ export const createProductReview = asyncHandler(async (req, res) => {
 
     product.reviews.push(review);
     product.ratings.count = product.reviews.length;
-    product.ratings.average = 
-      product.reviews.reduce((acc, item) => item.rating + acc, 0) / product.reviews.length;
+    product.ratings.average =
+      product.reviews.reduce((acc, item) => item.rating + acc, 0) /
+      product.reviews.length;
 
     await product.save();
-    res.status(201).json({ message: 'Review added' });
+    res.status(201).json({
+      success: true,
+      message: "Review added successfully",
+    });
   } else {
-    res.status(404).json({ message: 'Product not found' });
+    res.status(404).json({
+      success: false,
+      message: "Product not found",
+    });
   }
 });
