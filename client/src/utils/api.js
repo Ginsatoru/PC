@@ -31,14 +31,19 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor to handle errors
+// FIXED: Response interceptor to handle errors properly
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Success responses (2xx status codes) should pass through unchanged
+    console.log("API Success Response:", response.status, response.data); // Debug log
+    return response;
+  },
   (error) => {
     console.error("API Error:", error); // Debug log
 
+    // Only handle actual errors (4xx, 5xx status codes)
     if (error.response) {
-      const message = error.response.data.message || "An error occurred";
+      const message = error.response.data?.message || "An error occurred";
 
       // Handle specific error codes
       if (error.response.status === 401) {
@@ -50,7 +55,8 @@ api.interceptors.response.use(
         toast.error("Access denied.");
       } else if (error.response.status >= 500) {
         toast.error("Server error. Please try again later.");
-      } else {
+      } else if (error.response.status >= 400) {
+        // Only show toast for actual client/server errors
         toast.error(message);
       }
     } else if (error.request) {

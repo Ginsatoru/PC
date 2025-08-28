@@ -190,6 +190,7 @@ export const AuthProvider = ({ children }) => {
     toast.success("Logged out successfully");
   };
 
+  // EXISTING: updateProfile function that makes API call
   const updateProfile = async (userData) => {
     try {
       const response = await authAPI.updateProfile(userData);
@@ -200,6 +201,12 @@ export const AuthProvider = ({ children }) => {
       toast.error(error.response?.data?.message || "Profile update failed");
       throw error;
     }
+  };
+
+  // NEW: updateUser function that just updates the user in context (no API call)
+  const updateUser = (updatedUserData) => {
+    console.log("AuthContext - Updating user in context:", updatedUserData);
+    dispatch({ type: "UPDATE_USER", payload: updatedUserData });
   };
 
   const isAdmin = () => {
@@ -226,7 +233,8 @@ export const AuthProvider = ({ children }) => {
     login,
     register,
     logout,
-    updateProfile,
+    updateProfile, // Existing function that makes API call
+    updateUser, // NEW function that just updates context
     setAuthData, // NEW METHOD ADDED
     isAdmin,
   };
