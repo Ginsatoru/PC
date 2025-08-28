@@ -18,8 +18,18 @@ const userSchema = mongoose.Schema(
     },
     password: {
       type: String,
-      required: [true, "Please add a password"],
       minlength: 6,
+    },
+    googleId: {
+      type: String,
+      sparse: true, // Allows multiple null values
+    },
+    profilePic: {
+      type: String,
+    },
+    isEmailVerified: {
+      type: Boolean,
+      default: false,
     },
     role: {
       type: String,
@@ -29,7 +39,6 @@ const userSchema = mongoose.Schema(
     phone: {
       type: String,
     },
-    // UPDATED: Changed address to structured object to match frontend
     address: {
       street: {
         type: String,
@@ -58,17 +67,24 @@ const userSchema = mongoose.Schema(
   }
 );
 
-// Encrypt password before saving
+// Encrypt password before saving (only if password is modified)
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) {
     next();
   }
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
+
+  // Only hash password if it exists (Google users won't have passwords)
+  if (this.password) {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+  }
 });
 
-// Compare password
+// Compare password (only for users with passwords)
 userSchema.methods.matchPassword = async function (enteredPassword) {
+  if (!this.password) {
+    return false; // Google users don't have passwords
+  }
   return await bcrypt.compare(enteredPassword, this.password);
 };
 

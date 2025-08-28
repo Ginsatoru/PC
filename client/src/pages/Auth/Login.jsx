@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { FiEye, FiEyeOff, FiMail, FiLock } from "react-icons/fi";
 import { InlineLoader } from "../../components/Loader";
-import toast from "react-hot-toast";
+import { GoogleLogin } from "@react-oauth/google";
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -13,17 +13,16 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
 
-  const { login, loading, isAuthenticated, user } = useAuth();
+  const { login, loading, isAuthenticated, user, googleLogin } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
   const from = location.state?.from?.pathname || "/";
 
   useEffect(() => {
-    console.log("Login component - Auth state:", { isAuthenticated, user }); // Debug log
+    console.log("Login component - Auth state:", { isAuthenticated, user });
     if (isAuthenticated && user) {
-      console.log("User authenticated, navigating to:", from); // Debug log
-      // Navigate based on user role
+      console.log("User authenticated, navigating to:", from);
       if (user.role === "admin") {
         navigate("/admin/dashboard", { replace: true });
       } else {
@@ -38,7 +37,6 @@ const Login = () => {
       ...prev,
       [name]: value,
     }));
-    // Clear error when user starts typing
     if (errors[name]) {
       setErrors((prev) => ({
         ...prev,
@@ -67,11 +65,10 @@ const Login = () => {
     e.preventDefault();
     e.stopPropagation();
 
-    console.log("=== LOGIN FORM SUBMITTED ==="); // Debug log
-    console.log("Form data:", formData); // Debug log
-    console.log("Loading state:", loading); // Debug log
+    console.log("=== LOGIN FORM SUBMITTED ===");
+    console.log("Form data:", formData);
+    console.log("Loading state:", loading);
 
-    // Prevent multiple submissions
     if (loading) {
       console.log("Already loading, preventing duplicate submission");
       return;
@@ -85,15 +82,11 @@ const Login = () => {
     }
 
     try {
-      console.log("=== ATTEMPTING LOGIN ==="); // Debug log
+      console.log("=== ATTEMPTING LOGIN ===");
       const result = await login(formData);
-      console.log("=== LOGIN RESULT ===", result); // Debug log
-
-      // Don't handle navigation here, let the useEffect handle it
-      // The AuthContext will update the state and trigger the useEffect
+      console.log("=== LOGIN RESULT ===", result);
     } catch (error) {
-      console.error("=== LOGIN ERROR ===", error); // Debug log
-      // Error is already handled in AuthContext, but we can show additional info here
+      console.error("=== LOGIN ERROR ===", error);
       setErrors({
         general:
           error.response?.data?.message || "Login failed. Please try again.",
@@ -101,10 +94,23 @@ const Login = () => {
     }
   };
 
-  const handleDemoLogin = (email, password) => {
-    console.log("Demo login clicked:", email); // Debug log
-    setFormData({ email, password });
-    setErrors({});
+  const handleGoogleSuccess = async (credentialResponse) => {
+    try {
+      console.log("Google login successful:", credentialResponse);
+      await googleLogin(credentialResponse.credential);
+    } catch (error) {
+      console.error("Google login error:", error);
+      setErrors({
+        general: "Google login failed. Please try again.",
+      });
+    }
+  };
+
+  const handleGoogleError = () => {
+    console.error("Google login failed");
+    setErrors({
+      general: "Google login failed. Please try again.",
+    });
   };
 
   return (
@@ -131,6 +137,30 @@ const Login = () => {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+          {/* Google Sign-In Button - FIXED: Removed width prop */}
+          <div className="mb-6">
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={handleGoogleError}
+              useOneTap
+              theme="filled_blue"
+              size="large"
+              text="continue_with"
+              shape="rectangular"
+            />
+          </div>
+
+          <div className="relative mb-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300" />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-white text-gray-500">
+                Or continue with email
+              </span>
+            </div>
+          </div>
+
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
               <label
@@ -201,7 +231,6 @@ const Login = () => {
               )}
             </div>
 
-            {/* General error message */}
             {errors.general && (
               <div className="bg-red-50 border border-red-200 rounded-md p-3">
                 <p className="text-sm text-red-600">{errors.general}</p>
@@ -239,10 +268,6 @@ const Login = () => {
                 type="submit"
                 disabled={loading}
                 className="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                onClick={(e) => {
-                  console.log("=== BUTTON CLICKED ===");
-                  console.log("Button event:", e);
-                }}
               >
                 {loading ? (
                   <>
@@ -255,51 +280,6 @@ const Login = () => {
               </button>
             </div>
           </form>
-
-          <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">
-                  Demo Accounts
-                </span>
-              </div>
-            </div>
-
-            <div className="mt-4 space-y-2">
-              <button
-                type="button"
-                onClick={() =>
-                  handleDemoLogin("admin@pcpartshop.com", "admin123")
-                }
-                className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                Demo Admin Account
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  handleDemoLogin("john@example.com", "customer123")
-                }
-                className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                Demo Customer Account
-              </button>
-            </div>
-          </div>
-
-          {/* Debug Information */}
-          <div className="mt-4 p-2 bg-gray-100 rounded text-xs">
-            <strong>Debug Info:</strong>
-            <br />
-            Authenticated: {isAuthenticated ? "Yes" : "No"}
-            <br />
-            User: {user ? `${user.name} (${user.role})` : "None"}
-            <br />
-            Loading: {loading ? "Yes" : "No"}
-          </div>
         </div>
       </div>
     </div>

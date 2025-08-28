@@ -1,6 +1,10 @@
 import User from "../models/User.js";
 import { generateToken } from "../middleware/authMiddleware.js";
 import { asyncHandler } from "../middleware/errorMiddleware.js";
+import { OAuth2Client } from "google-auth-library";
+
+// Create Google OAuth2 client
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // @desc    Register a new user
 // @route   POST /api/auth/register
@@ -54,6 +58,7 @@ export const registerUser = asyncHandler(async (req, res) => {
         role: user.role,
         phone: user.phone,
         address: user.address,
+        profilePic: user.profilePic,
       },
     });
   } else {
@@ -118,6 +123,7 @@ export const loginUser = asyncHandler(async (req, res) => {
             role: user.role,
             phone: user.phone,
             address: user.address,
+            profilePic: user.profilePic,
           },
         };
 
@@ -149,6 +155,86 @@ export const loginUser = asyncHandler(async (req, res) => {
   }
 });
 
+// @desc    Authenticate user with Google
+// @route   POST /api/auth/google
+// @access  Public
+export const googleLogin = asyncHandler(async (req, res) => {
+  console.log("=== GOOGLE LOGIN ENDPOINT HIT ===");
+  console.log("Request body:", {
+    token: req.body.token ? "exists" : "missing",
+  });
+
+  const { token } = req.body;
+
+  if (!token) {
+    return res.status(400).json({
+      success: false,
+      message: "Google token is required",
+    });
+  }
+
+  try {
+    // Verify Google token
+    const ticket = await client.verifyIdToken({
+      idToken: token,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    console.log("Google payload:", payload);
+
+    const { sub: googleId, name, email, picture } = payload;
+
+    // Check if user already exists with this Google ID
+    let user = await User.findOne({ googleId });
+
+    if (!user) {
+      // Check if user exists with this email but without Google ID
+      user = await User.findOne({ email });
+
+      if (user) {
+        // Link Google account to existing user
+        user.googleId = googleId;
+        user.profilePic = picture;
+        await user.save();
+      } else {
+        // Create new user with Google data
+        user = await User.create({
+          googleId,
+          name,
+          email,
+          password: Math.random().toString(36).slice(-16), // Random password
+          profilePic: picture,
+          isEmailVerified: true,
+        });
+      }
+    }
+
+    // Generate JWT token
+    const jwtToken = generateToken(user._id);
+
+    res.json({
+      success: true,
+      token: jwtToken,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        phone: user.phone,
+        address: user.address,
+        profilePic: user.profilePic,
+      },
+    });
+  } catch (error) {
+    console.error("Google login error:", error);
+    res.status(401).json({
+      success: false,
+      message: "Invalid Google token",
+    });
+  }
+});
+
 // @desc    Get user profile
 // @route   GET /api/auth/profile
 // @access  Private
@@ -165,6 +251,7 @@ export const getUserProfile = asyncHandler(async (req, res) => {
         role: user.role,
         phone: user.phone,
         address: user.address,
+        profilePic: user.profilePic,
       },
     });
   } else {
@@ -220,10 +307,10 @@ export const updateUserProfile = asyncHandler(async (req, res) => {
     user.name = req.body.name || user.name;
     user.email = req.body.email || user.email;
     user.phone = req.body.phone || user.phone;
+    user.profilePic = req.body.profilePic || user.profilePic;
 
-    // UPDATED: Handle structured address properly
+    // Handle structured address properly
     if (req.body.address) {
-      // If address is provided, update the address object
       user.address = {
         street: req.body.address.street || user.address?.street || "",
         city: req.body.address.city || user.address?.city || "",
@@ -238,6 +325,7 @@ export const updateUserProfile = asyncHandler(async (req, res) => {
       email: user.email,
       phone: user.phone,
       address: user.address,
+      profilePic: user.profilePic,
     });
 
     const updatedUser = await user.save();
@@ -253,6 +341,7 @@ export const updateUserProfile = asyncHandler(async (req, res) => {
         role: updatedUser.role,
         phone: updatedUser.phone,
         address: updatedUser.address,
+        profilePic: updatedUser.profilePic,
       },
     });
   } catch (error) {

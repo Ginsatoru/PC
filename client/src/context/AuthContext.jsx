@@ -8,6 +8,7 @@ const authReducer = (state, action) => {
   switch (action.type) {
     case "LOGIN_START":
     case "REGISTER_START":
+    case "GOOGLE_LOGIN_START":
       return {
         ...state,
         loading: true,
@@ -15,19 +16,20 @@ const authReducer = (state, action) => {
       };
     case "LOGIN_SUCCESS":
     case "REGISTER_SUCCESS":
-      // Store token and user data properly
+    case "GOOGLE_LOGIN_SUCCESS":
       localStorage.setItem("token", action.payload.token);
       localStorage.setItem("user", JSON.stringify(action.payload.user));
       return {
         ...state,
         loading: false,
         isAuthenticated: true,
-        user: action.payload.user, // Store user object, not the whole payload
+        user: action.payload.user,
         token: action.payload.token,
         error: null,
       };
     case "LOGIN_FAILURE":
     case "REGISTER_FAILURE":
+    case "GOOGLE_LOGIN_FAILURE":
       return {
         ...state,
         loading: false,
@@ -83,7 +85,6 @@ const initialState = {
 export const AuthProvider = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
-  // Load user from localStorage on app start
   useEffect(() => {
     const token = localStorage.getItem("token");
     const user = localStorage.getItem("user");
@@ -91,12 +92,12 @@ export const AuthProvider = ({ children }) => {
     console.log("Loading user from localStorage:", {
       token: token ? "exists" : "none",
       user: user ? "exists" : "none",
-    }); // Debug log
+    });
 
     if (token && user) {
       try {
         const parsedUser = JSON.parse(user);
-        console.log("Parsed user from localStorage:", parsedUser); // Debug log
+        console.log("Parsed user from localStorage:", parsedUser);
         dispatch({
           type: "LOAD_USER",
           payload: {
@@ -114,25 +115,24 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (credentials) => {
     try {
-      console.log("AuthContext - Starting login for:", credentials.email); // Debug log
+      console.log("AuthContext - Starting login for:", credentials.email);
       dispatch({ type: "LOGIN_START" });
 
       const response = await authAPI.login(credentials);
-      console.log("AuthContext - Login API response:", response.data); // Debug log
+      console.log("AuthContext - Login API response:", response.data);
 
-      // Make sure we have the expected response structure
       if (!response.data.token || !response.data.user) {
         throw new Error("Invalid response structure from login API");
       }
 
       dispatch({ type: "LOGIN_SUCCESS", payload: response.data });
 
-      console.log("AuthContext - Login successful, user:", response.data.user); // Debug log
+      console.log("AuthContext - Login successful, user:", response.data.user);
       toast.success(`Welcome back, ${response.data.user.name}!`);
 
       return response.data;
     } catch (error) {
-      console.error("AuthContext - Login error:", error); // Debug log
+      console.error("AuthContext - Login error:", error);
       const errorMessage =
         error.response?.data?.message || error.message || "Login failed";
       dispatch({ type: "LOGIN_FAILURE", payload: errorMessage });
@@ -143,13 +143,12 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (userData) => {
     try {
-      console.log("AuthContext - Starting registration"); // Debug log
+      console.log("AuthContext - Starting registration");
       dispatch({ type: "REGISTER_START" });
 
       const response = await authAPI.register(userData);
-      console.log("AuthContext - Register API response:", response.data); // Debug log
+      console.log("AuthContext - Register API response:", response.data);
 
-      // Make sure we have the expected response structure
       if (!response.data.token || !response.data.user) {
         throw new Error("Invalid response structure from register API");
       }
@@ -159,12 +158,12 @@ export const AuthProvider = ({ children }) => {
       console.log(
         "AuthContext - Registration successful, user:",
         response.data.user
-      ); // Debug log
+      );
       toast.success(`Welcome, ${response.data.user.name}!`);
 
       return response.data;
     } catch (error) {
-      console.error("AuthContext - Registration error:", error); // Debug log
+      console.error("AuthContext - Registration error:", error);
       const errorMessage =
         error.response?.data?.message || error.message || "Registration failed";
       dispatch({ type: "REGISTER_FAILURE", payload: errorMessage });
@@ -173,11 +172,42 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // NEW METHOD: Set auth data directly without API call
+  // NEW: Google login method
+  const googleLogin = async (googleToken) => {
+    try {
+      console.log("AuthContext - Starting Google login");
+      dispatch({ type: "GOOGLE_LOGIN_START" });
+
+      const response = await authAPI.googleLogin(googleToken);
+      console.log("AuthContext - Google login API response:", response.data);
+
+      if (!response.data.token || !response.data.user) {
+        throw new Error("Invalid response structure from Google login API");
+      }
+
+      dispatch({ type: "GOOGLE_LOGIN_SUCCESS", payload: response.data });
+
+      console.log(
+        "AuthContext - Google login successful, user:",
+        response.data.user
+      );
+      toast.success(`Welcome, ${response.data.user.name}!`);
+
+      return response.data;
+    } catch (error) {
+      console.error("AuthContext - Google login error:", error);
+      const errorMessage =
+        error.response?.data?.message || error.message || "Google login failed";
+      dispatch({ type: "GOOGLE_LOGIN_FAILURE", payload: errorMessage });
+      toast.error(errorMessage);
+      throw error;
+    }
+  };
+
   const setAuthData = (token, user) => {
     console.log("AuthContext - Setting auth data directly:", {
       user: user.name,
-    }); // Debug log
+    });
     dispatch({
       type: "LOGIN_SUCCESS",
       payload: { token, user },
@@ -185,12 +215,11 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
-    console.log("AuthContext - Logging out user"); // Debug log
+    console.log("AuthContext - Logging out user");
     dispatch({ type: "LOGOUT" });
     toast.success("Logged out successfully");
   };
 
-  // EXISTING: updateProfile function that makes API call
   const updateProfile = async (userData) => {
     try {
       const response = await authAPI.updateProfile(userData);
@@ -203,7 +232,6 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // NEW: updateUser function that just updates the user in context (no API call)
   const updateUser = (updatedUserData) => {
     console.log("AuthContext - Updating user in context:", updatedUserData);
     dispatch({ type: "UPDATE_USER", payload: updatedUserData });
@@ -214,11 +242,10 @@ export const AuthProvider = ({ children }) => {
     console.log("AuthContext - isAdmin check:", {
       user: state.user,
       isAdmin: result,
-    }); // Debug log
+    });
     return result;
   };
 
-  // Debug the current state
   useEffect(() => {
     console.log("AuthContext - State changed:", {
       isAuthenticated: state.isAuthenticated,
@@ -232,10 +259,11 @@ export const AuthProvider = ({ children }) => {
     ...state,
     login,
     register,
+    googleLogin, // NEW: Add googleLogin to context
     logout,
-    updateProfile, // Existing function that makes API call
-    updateUser, // NEW function that just updates context
-    setAuthData, // NEW METHOD ADDED
+    updateProfile,
+    updateUser,
+    setAuthData,
     isAdmin,
   };
 

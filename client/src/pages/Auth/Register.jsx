@@ -1,6 +1,7 @@
 import { useState, useContext } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
+import { GoogleLogin } from "@react-oauth/google";
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -12,8 +13,7 @@ const Register = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Use setAuthData instead of login
-  const { setAuthData } = useContext(AuthContext);
+  const { setAuthData, googleLogin } = useContext(AuthContext);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -53,8 +53,6 @@ const Register = () => {
       const data = await response.json();
 
       if (response.ok) {
-        // FIXED: Use setAuthData instead of login
-        // This sets the auth state directly without making another API call
         setAuthData(data.token, data.user);
         navigate("/");
       } else {
@@ -65,6 +63,21 @@ const Register = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    try {
+      console.log("Google registration successful:", credentialResponse);
+      await googleLogin(credentialResponse.credential);
+    } catch (error) {
+      console.error("Google registration error:", error);
+      setError("Google registration failed. Please try again.");
+    }
+  };
+
+  const handleGoogleError = () => {
+    console.error("Google registration failed");
+    setError("Google registration failed. Please try again.");
   };
 
   return (
@@ -84,6 +97,31 @@ const Register = () => {
             </Link>
           </p>
         </div>
+
+        {/* Google Sign-In Button */}
+        <div>
+          <GoogleLogin
+            onSuccess={handleGoogleSuccess}
+            onError={handleGoogleError}
+            useOneTap
+            theme="filled_blue"
+            size="large"
+            text="signup_with"
+            shape="rectangular"
+          />
+        </div>
+
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-300" />
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="px-2 bg-gray-50 text-gray-500">
+              Or continue with email
+            </span>
+          </div>
+        </div>
+
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           {error && (
             <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
