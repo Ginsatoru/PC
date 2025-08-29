@@ -29,34 +29,27 @@ PC/
 │ ├── .env
 │ ├── package.json
 │ ├── server.js
-│ │
 │ ├── config/
 │ │ └── db.js
-│ │
 │ ├── models/
 │ │ ├── User.js
 │ │ ├── Product.js
 │ │ └── Order.js
-│ │
 │ ├── routes/
 │ │ ├── authRoutes.js
 │ │ ├── productRoutes.js
 │ │ └── orderRoutes.js
-│ │
-│ ├── uploads/  
-│ │ ├── products/  
-│ │ └── users/  
-│ │
+│ ├── uploads/
+│ │ ├── products/
+│ │ └── users/
 │ ├── controllers/
 │ │ ├── authController.js
 │ │ ├── productController.js
 │ │ └── orderController.js
-│ │
 │ ├── middleware/
 │ │ ├── uploadMiddleware.js
 │ │ ├── authMiddleware.js
 │ │ └── errorMiddleware.js
-│ │
 │ └── utils/
 │ └── seedData.js
 │
@@ -66,18 +59,15 @@ PC/
 │ ├── vite.config.js
 │ ├── tailwind.config.js
 │ ├── postcss.config.js
-│ │
 │ └── src/
 │ ├── main.jsx
 │ ├── App.jsx
 │ ├── index.css
-│ │
 │ ├── components/
 │ │ ├── Navbar.jsx
 │ │ ├── Footer.jsx
 │ │ ├── ProductCard.jsx
 │ │ └── Loader.jsx
-│ │
 │ ├── pages/
 │ │ ├── Home.jsx
 │ │ ├── Products.jsx
@@ -85,7 +75,6 @@ PC/
 │ │ ├── ProductDetail.jsx
 │ │ ├── Cart.jsx
 │ │ ├── Checkout.jsx
-│ │ │
 │ │ ├── Dashboard/
 │ │ │ ├── Admin/
 │ │ │ │ ├── AdminDashboard.jsx
@@ -94,7 +83,6 @@ PC/
 │ │ │ │ ├── Overview.jsx
 │ │ │ │ ├── ProductManager.jsx
 │ │ │ │ └── UsersManager.jsx
-│ │ │ │
 │ │ │ └── User/
 │ │ │ ├── AccountStats.jsx
 │ │ │ ├── OrderDetailModal.jsx
@@ -102,18 +90,14 @@ PC/
 │ │ │ ├── ProfileSection.jsx
 │ │ │ ├── QuickActions.jsx
 │ │ │ └── UserDashboard.jsx
-│ │ │
 │ │ └── Auth/
 │ │ ├── Login.jsx
 │ │ └── Register.jsx
-│ │
 │ ├── context/
 │ │ ├── AuthContext.jsx
 │ │ └── CartContext.jsx
-│ │
 │ ├── hooks/
 │ │ └── useFetch.js
-│ │
 │ └── utils/
 │ └── api.js
 │
