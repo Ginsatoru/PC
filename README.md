@@ -23,99 +23,96 @@ A full-featured e-commerce web application for PC parts and components built wit
 
 ## 📂 Project Structure
 
+```text
 PC/
 │
 ├── backend/
-│ ├── .env
-│ ├── package.json
-│ ├── server.js
-│ ├── config/
-│ │ └── db.js
-│ ├── models/
-│ │ ├── User.js
-│ │ ├── Product.js
-│ │ └── Order.js
-│ ├── routes/
-│ │ ├── authRoutes.js
-│ │ ├── productRoutes.js
-│ │ └── orderRoutes.js
-│ ├── uploads/
-│ │ ├── products/
-│ │ └── users/
-│ ├── controllers/
-│ │ ├── authController.js
-│ │ ├── productController.js
-│ │ └── orderController.js
-│ ├── middleware/
-│ │ ├── uploadMiddleware.js
-│ │ ├── authMiddleware.js
-│ │ └── errorMiddleware.js
-│ └── utils/
-│ └── seedData.js
+│   ├── .env
+│   ├── package.json
+│   ├── server.js
+│   ├── config/
+│   │   └── db.js
+│   ├── models/
+│   │   ├── User.js
+│   │   ├── Product.js
+│   │   └── Order.js
+│   ├── routes/
+│   │   ├── authRoutes.js
+│   │   ├── productRoutes.js
+│   │   └── orderRoutes.js
+│   ├── uploads/
+│   │   ├── products/
+│   │   └── users/
+│   ├── controllers/
+│   │   ├── authController.js
+│   │   ├── productController.js
+│   │   └── orderController.js
+│   ├── middleware/
+│   │   ├── uploadMiddleware.js
+│   │   ├── authMiddleware.js
+│   │   └── errorMiddleware.js
+│   └── utils/
+│       └── seedData.js
 │
 ├── frontend/ (React + Vite)
-│ ├── .env
-│ ├── package.json
-│ ├── vite.config.js
-│ ├── tailwind.config.js
-│ ├── postcss.config.js
-│ └── src/
-│ ├── main.jsx
-│ ├── App.jsx
-│ ├── index.css
-│ ├── components/
-│ │ ├── Navbar.jsx
-│ │ ├── Footer.jsx
-│ │ ├── ProductCard.jsx
-│ │ └── Loader.jsx
-│ ├── pages/
-│ │ ├── Home.jsx
-│ │ ├── Products.jsx
-│ │ ├── Category.jsx
-│ │ ├── ProductDetail.jsx
-│ │ ├── Cart.jsx
-│ │ ├── Checkout.jsx
-│ │ ├── Dashboard/
-│ │ │ ├── Admin/
-│ │ │ │ ├── AdminDashboard.jsx
-│ │ │ │ ├── OrderDetailModal.jsx
-│ │ │ │ ├── OrdersManager.jsx
-│ │ │ │ ├── Overview.jsx
-│ │ │ │ ├── ProductManager.jsx
-│ │ │ │ └── UsersManager.jsx
-│ │ │ └── User/
-│ │ │ ├── AccountStats.jsx
-│ │ │ ├── OrderDetailModal.jsx
-│ │ │ ├── OrdersSection.jsx
-│ │ │ ├── ProfileSection.jsx
-│ │ │ ├── QuickActions.jsx
-│ │ │ └── UserDashboard.jsx
-│ │ └── Auth/
-│ │ ├── Login.jsx
-│ │ └── Register.jsx
-│ ├── context/
-│ │ ├── AuthContext.jsx
-│ │ └── CartContext.jsx
-│ ├── hooks/
-│ │ └── useFetch.js
-│ └── utils/
-│ └── api.js
+│   ├── .env
+│   ├── package.json
+│   ├── vite.config.js
+│   ├── tailwind.config.js
+│   ├── postcss.config.js
+│   └── src/
+│       ├── main.jsx
+│       ├── App.jsx
+│       ├── index.css
+│       ├── components/
+│       │   ├── Navbar.jsx
+│       │   ├── Footer.jsx
+│       │   ├── ProductCard.jsx
+│       │   └── Loader.jsx
+│       ├── pages/
+│       │   ├── Home.jsx
+│       │   ├── Products.jsx
+│       │   ├── Category.jsx
+│       │   ├── ProductDetail.jsx
+│       │   ├── Cart.jsx
+│       │   ├── Checkout.jsx
+│       │   ├── Dashboard/
+│       │   │   ├── Admin/
+│       │   │   │   ├── AdminDashboard.jsx
+│       │   │   │   ├── OrderDetailModal.jsx
+│       │   │   │   ├── OrdersManager.jsx
+│       │   │   │   ├── Overview.jsx
+│       │   │   │   ├── ProductManager.jsx
+│       │   │   │   └── UsersManager.jsx
+│       │   │   └── User/
+│       │   │       ├── AccountStats.jsx
+│       │   │       ├── OrderDetailModal.jsx
+│       │   │       ├── OrdersSection.jsx
+│       │   │       ├── ProfileSection.jsx
+│       │   │       ├── QuickActions.jsx
+│       │   │       └── UserDashboard.jsx
+│       │   └── Auth/
+│       │       ├── Login.jsx
+│       │       └── Register.jsx
+│       ├── context/
+│       │   ├── AuthContext.jsx
+│       │   └── CartContext.jsx
+│       ├── hooks/
+│       │   └── useFetch.js
+│       └── utils/
+│           └── api.js
 │
 └── README.md
-
----
-
-## ⚙️ Installation
-
-### 1️⃣ Clone the repository
-
-```bash
+⚙️ Installation
+1️⃣ Clone the repository
+bash
+Copy code
 git clone https://github.com/Ginsatoru/PC.git
 cd PC
 2️⃣ Backend Setup
 bash
 Copy code
-cd server
+cd backend
 npm install
 Create a .env file in the backend/ folder:
 
@@ -134,7 +131,7 @@ npm run dev
 3️⃣ Frontend Setup
 bash
 Copy code
-cd client
+cd frontend
 npm install
 npm run dev
 🛠 Tech Stack
