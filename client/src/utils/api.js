@@ -20,6 +20,12 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    // Don't set Content-Type for FormData - let browser set it with boundary
+    if (config.data instanceof FormData) {
+      delete config.headers["Content-Type"];
+    }
+
     console.log(`Making request to: ${config.baseURL}${config.url}`);
     return config;
   },
@@ -82,8 +88,22 @@ export const productAPI = {
   getCategories: () => api.get("/products/categories"),
   getBrands: () => api.get("/products/brands"),
   getProductById: (id) => api.get(`/products/${id}`),
-  createProduct: (productData) => api.post("/products", productData),
-  updateProduct: (id, productData) => api.put(`/products/${id}`, productData),
+  createProduct: (productData) => {
+    // Handle both FormData and regular objects
+    const config =
+      productData instanceof FormData
+        ? { headers: { "Content-Type": "multipart/form-data" } }
+        : {};
+    return api.post("/products", productData, config);
+  },
+  updateProduct: (id, productData) => {
+    // Handle both FormData and regular objects
+    const config =
+      productData instanceof FormData
+        ? { headers: { "Content-Type": "multipart/form-data" } }
+        : {};
+    return api.put(`/products/${id}`, productData, config);
+  },
   deleteProduct: (id) => api.delete(`/products/${id}`),
   createReview: (id, reviewData) =>
     api.post(`/products/${id}/reviews`, reviewData),

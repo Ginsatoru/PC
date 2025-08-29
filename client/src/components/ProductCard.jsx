@@ -1,142 +1,155 @@
-import { Link } from 'react-router-dom';
-import { FiShoppingCart, FiStar } from 'react-icons/fi';
-import { useCart } from '../context/CartContext';
-import { formatPrice } from '../utils/api';
-import toast from 'react-hot-toast';
+import React, { useState } from "react";
+import { Link } from "react-router-dom";
 
 const ProductCard = ({ product }) => {
-  const { addToCart } = useCart();
+  const [imageError, setImageError] = useState(false);
+  const [imageLoading, setImageLoading] = useState(true);
 
-  const handleAddToCart = (e) => {
-    e.preventDefault();
-    if (product.stock > 0) {
-      addToCart(product, 1);
-    } else {
-      toast.error('Product is out of stock');
+  // Construct full image URL
+  const getImageUrl = (imagePath) => {
+    if (!imagePath) return null;
+
+    // If it's already a full URL, return as is
+    if (imagePath.startsWith("http")) {
+      return imagePath;
     }
+
+    // Otherwise, construct full URL with API base
+    const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
+    const cleanPath = imagePath.startsWith("/") ? imagePath : `/${imagePath}`;
+    return `${baseUrl}${cleanPath}`;
   };
 
-  const renderStars = (rating) => {
-    const stars = [];
-    const fullStars = Math.floor(rating);
-    const hasHalfStar = rating % 1 !== 0;
+  const imageUrl = getImageUrl(product.image);
 
-    for (let i = 0; i < fullStars; i++) {
-      stars.push(
-        <FiStar key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-      );
-    }
+  const handleImageLoad = () => {
+    setImageLoading(false);
+  };
 
-    if (hasHalfStar) {
-      stars.push(
-        <FiStar key="half" className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-      );
-    }
+  const handleImageError = () => {
+    setImageError(true);
+    setImageLoading(false);
+  };
 
-    const emptyStars = 5 - Math.ceil(rating);
-    for (let i = 0; i < emptyStars; i++) {
-      stars.push(
-        <FiStar key={`empty-${i}`} className="w-4 h-4 text-gray-300" />
-      );
-    }
-
-    return stars;
+  const formatPrice = (price) => {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+    }).format(price);
   };
 
   return (
-    <div className="card overflow-hidden group hover:shadow-lg transition-all duration-300">
-      <Link to={`/product/${product._id}`} className="block">
-        <div className="relative overflow-hidden">
+    <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition duration-300 group">
+      {/* Product Image */}
+      <div className="relative h-48 bg-gray-100 overflow-hidden">
+        {imageLoading && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          </div>
+        )}
+
+        {imageError || !imageUrl ? (
+          <div className="w-full h-full flex items-center justify-center bg-gray-200">
+            <div className="text-center">
+              <div className="text-4xl text-gray-400 mb-2">📦</div>
+              <p className="text-xs text-gray-500">No Image</p>
+            </div>
+          </div>
+        ) : (
           <img
-            src={product.image}
+            src={imageUrl}
             alt={product.name}
-            className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+            className={`w-full h-full object-cover group-hover:scale-105 transition duration-300 ${
+              imageLoading ? "opacity-0" : "opacity-100"
+            }`}
+            onLoad={handleImageLoad}
+            onError={handleImageError}
+            loading="lazy"
           />
-          {product.featured && (
-            <div className="absolute top-2 left-2 bg-primary-600 text-white px-2 py-1 rounded text-xs font-medium">
-              Featured
-            </div>
-          )}
-          {product.stock === 0 && (
-            <div className="absolute top-2 right-2 bg-red-600 text-white px-2 py-1 rounded text-xs font-medium">
+        )}
+
+        {/* Stock Status Badge */}
+        <div className="absolute top-2 right-2">
+          {product.stock > 0 ? (
+            product.stock <= 10 ? (
+              <span className="bg-yellow-500 text-white text-xs px-2 py-1 rounded-full">
+                Low Stock
+              </span>
+            ) : (
+              <span className="bg-green-500 text-white text-xs px-2 py-1 rounded-full">
+                In Stock
+              </span>
+            )
+          ) : (
+            <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
               Out of Stock
-            </div>
-          )}
-          {product.stock > 0 && product.stock <= 5 && (
-            <div className="absolute top-2 right-2 bg-orange-600 text-white px-2 py-1 rounded text-xs font-medium">
-              Low Stock
-            </div>
+            </span>
           )}
         </div>
-        
-        <div className="p-4">
-          {/* Category Badge */}
-          <div className="mb-2">
-            <span className="inline-block bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full">
-              {product.category}
-            </span>
-          </div>
+      </div>
 
-          {/* Product Name */}
-          <h3 className="text-lg font-semibold text-gray-900 mb-1 line-clamp-2 group-hover:text-primary-600 transition-colors">
+      {/* Product Info */}
+      <div className="p-4">
+        {/* Category */}
+        <div className="text-xs text-blue-600 font-medium mb-1">
+          {product.category}
+        </div>
+
+        {/* Product Name */}
+        <h3 className="text-lg font-semibold text-gray-800 mb-2 line-clamp-2 hover:text-blue-600 transition duration-200">
+          <Link to={`/products/${product._id}`} className="block">
             {product.name}
-          </h3>
+          </Link>
+        </h3>
 
-          {/* Brand and Model */}
+        {/* Brand */}
+        {product.brand && (
           <p className="text-sm text-gray-600 mb-2">
-            {product.brand} • {product.model}
+            Brand: <span className="font-medium">{product.brand}</span>
           </p>
+        )}
 
-          {/* Rating */}
-          {product.ratings && product.ratings.count > 0 && (
-            <div className="flex items-center mb-2">
-              <div className="flex items-center">
-                {renderStars(product.ratings.average)}
-              </div>
-              <span className="text-sm text-gray-500 ml-2">
-                ({product.ratings.count})
-              </span>
-            </div>
-          )}
-
-          {/* Price */}
-          <div className="flex items-center justify-between mb-3">
-            <div className="text-2xl font-bold text-primary-600">
-              {formatPrice(product.price)}
-            </div>
-            <div className="text-sm text-gray-500">
-              Stock: {product.stock}
-            </div>
-          </div>
-
-          {/* Description */}
-          <p className="text-sm text-gray-600 mb-4 line-clamp-2">
+        {/* Description Preview */}
+        {product.description && (
+          <p className="text-sm text-gray-600 mb-3 line-clamp-2">
             {product.description}
           </p>
-        </div>
-      </Link>
+        )}
 
-      {/* Action Buttons */}
-      <div className="px-4 pb-4">
-        <div className="flex space-x-2">
+        {/* Price and Stock Info */}
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <span className="text-xl font-bold text-gray-800">
+              {formatPrice(product.price)}
+            </span>
+            {product.originalPrice && product.originalPrice > product.price && (
+              <span className="text-sm text-gray-500 line-through ml-2">
+                {formatPrice(product.originalPrice)}
+              </span>
+            )}
+          </div>
+          <div className="text-sm text-gray-500">Stock: {product.stock}</div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex gap-2">
           <Link
-            to={`/product/${product._id}`}
-            className="flex-1 btn btn-outline text-center"
+            to={`/products/${product._id}`}
+            className="flex-1 bg-blue-600 text-white py-2 px-4 rounded text-center hover:bg-blue-700 transition duration-200 text-sm font-medium"
           >
             View Details
           </Link>
-          <button
-            onClick={handleAddToCart}
-            disabled={product.stock === 0}
-            className={`flex-1 btn flex items-center justify-center space-x-2 ${
-              product.stock === 0
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                : 'btn-primary'
-            }`}
-          >
-            <FiShoppingCart className="w-4 h-4" />
-            <span>{product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}</span>
-          </button>
+          {product.stock > 0 && (
+            <button
+              className="bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700 transition duration-200 text-sm font-medium"
+              onClick={(e) => {
+                e.preventDefault();
+                // Add to cart functionality here
+              }}
+            >
+              Add to Cart
+            </button>
+          )}
         </div>
       </div>
     </div>

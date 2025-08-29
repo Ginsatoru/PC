@@ -92,6 +92,7 @@ pc-part-shop/
 │   │   ├── productController.js
 │   │   └── orderController.js
 │   ├── middleware/
+│   │   │── uploadMiddleware.js
 │   │   ├── authMiddleware.js
 │   │   └── errorMiddleware.js
 │   └── utils/

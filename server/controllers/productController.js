@@ -1,5 +1,7 @@
 import Product from "../models/Product.js";
 import { asyncHandler } from "../middleware/errorMiddleware.js";
+import fs from "fs";
+import path from "path";
 
 // @desc    Get all products with pagination and filtering
 // @route   GET /api/products
@@ -170,6 +172,25 @@ export const getProductById = asyncHandler(async (req, res) => {
   }
 });
 
+// Helper function to delete old image file
+const deleteImageFile = (imagePath) => {
+  if (
+    imagePath &&
+    !imagePath.startsWith("http") &&
+    !imagePath.includes("placeholder")
+  ) {
+    const fullPath = path.join(
+      process.cwd(),
+      "uploads",
+      "products",
+      path.basename(imagePath)
+    );
+    if (fs.existsSync(fullPath)) {
+      fs.unlinkSync(fullPath);
+    }
+  }
+};
+
 // @desc    Create a product (Admin only)
 // @route   POST /api/products
 // @access  Private/Admin
@@ -183,17 +204,25 @@ export const createProduct = asyncHandler(async (req, res) => {
     stock,
     description,
     specifications,
-    image,
-    images,
     featured,
   } = req.body;
 
   // Validation
   if (!name || !category || !brand || !model || !price || !description) {
+    // If file was uploaded but validation failed, delete it
+    if (req.file) {
+      deleteImageFile(req.file.filename);
+    }
     return res.status(400).json({
       success: false,
       message: "Please provide all required fields",
     });
+  }
+
+  // Handle image - either uploaded file or default placeholder
+  let imageUrl = "https://via.placeholder.com/400x300?text=PC+Part";
+  if (req.file) {
+    imageUrl = `/uploads/products/${req.file.filename}`;
   }
 
   const product = new Product({
@@ -204,10 +233,10 @@ export const createProduct = asyncHandler(async (req, res) => {
     price,
     stock: stock || 0,
     description,
-    specifications,
-    image: image || "https://via.placeholder.com/400x300?text=PC+Part",
-    images: images || [],
-    featured: featured || false,
+    specifications: specifications ? JSON.parse(specifications) : {},
+    image: imageUrl,
+    images: [],
+    featured: featured === "true" || featured === true || false,
   });
 
   const createdProduct = await product.save();
@@ -224,36 +253,59 @@ export const createProduct = asyncHandler(async (req, res) => {
 export const updateProduct = asyncHandler(async (req, res) => {
   const product = await Product.findById(req.params.id);
 
-  if (product) {
-    product.name = req.body.name || product.name;
-    product.category = req.body.category || product.category;
-    product.brand = req.body.brand || product.brand;
-    product.model = req.body.model || product.model;
-    product.price =
-      req.body.price !== undefined ? req.body.price : product.price;
-    product.stock =
-      req.body.stock !== undefined ? req.body.stock : product.stock;
-    product.description = req.body.description || product.description;
-    product.specifications = req.body.specifications || product.specifications;
-    product.image = req.body.image || product.image;
-    product.images = req.body.images || product.images;
-    product.featured =
-      req.body.featured !== undefined ? req.body.featured : product.featured;
-    product.isActive =
-      req.body.isActive !== undefined ? req.body.isActive : product.isActive;
-
-    const updatedProduct = await product.save();
-    res.json({
-      success: true,
-      data: updatedProduct,
-      message: "Product updated successfully",
-    });
-  } else {
-    res.status(404).json({
+  if (!product) {
+    // If file was uploaded but product not found, delete it
+    if (req.file) {
+      deleteImageFile(req.file.filename);
+    }
+    return res.status(404).json({
       success: false,
       message: "Product not found",
     });
   }
+
+  // Store old image path for potential deletion
+  const oldImagePath = product.image;
+
+  // Update product fields
+  product.name = req.body.name || product.name;
+  product.category = req.body.category || product.category;
+  product.brand = req.body.brand || product.brand;
+  product.model = req.body.model || product.model;
+  product.price = req.body.price !== undefined ? req.body.price : product.price;
+  product.stock = req.body.stock !== undefined ? req.body.stock : product.stock;
+  product.description = req.body.description || product.description;
+  product.specifications = req.body.specifications
+    ? typeof req.body.specifications === "string"
+      ? JSON.parse(req.body.specifications)
+      : req.body.specifications
+    : product.specifications;
+  product.featured =
+    req.body.featured !== undefined
+      ? req.body.featured === "true" || req.body.featured === true
+      : product.featured;
+  product.isActive =
+    req.body.isActive !== undefined ? req.body.isActive : product.isActive;
+
+  // Handle image update
+  if (req.file) {
+    // Delete old image if it's not a placeholder or external URL
+    if (
+      oldImagePath &&
+      !oldImagePath.startsWith("http") &&
+      !oldImagePath.includes("placeholder")
+    ) {
+      deleteImageFile(oldImagePath);
+    }
+    product.image = `/uploads/products/${req.file.filename}`;
+  }
+
+  const updatedProduct = await product.save();
+  res.json({
+    success: true,
+    data: updatedProduct,
+    message: "Product updated successfully",
+  });
 });
 
 // @desc    Delete a product (Admin only)
@@ -263,6 +315,15 @@ export const deleteProduct = asyncHandler(async (req, res) => {
   const product = await Product.findById(req.params.id);
 
   if (product) {
+    // Delete associated image file
+    if (
+      product.image &&
+      !product.image.startsWith("http") &&
+      !product.image.includes("placeholder")
+    ) {
+      deleteImageFile(product.image);
+    }
+
     await product.deleteOne();
     res.json({
       success: true,

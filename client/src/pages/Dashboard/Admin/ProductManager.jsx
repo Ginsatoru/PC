@@ -1,7 +1,13 @@
 import React, { useState } from "react";
 import api from "../../../utils/api";
 
-const ProductsManager = ({ products, setProducts, loading, setLoading, refreshData }) => {
+const ProductsManager = ({
+  products,
+  setProducts,
+  loading,
+  setLoading,
+  refreshData,
+}) => {
   const [editingProduct, setEditingProduct] = useState(null);
   const [productForm, setProductForm] = useState({
     name: "",
@@ -11,8 +17,9 @@ const ProductsManager = ({ products, setProducts, loading, setLoading, refreshDa
     price: "",
     stock: "",
     description: "",
-    image: "",
+    image: null,
   });
+  const [imagePreview, setImagePreview] = useState(null);
 
   const categories = [
     "CPU",
@@ -27,16 +34,67 @@ const ProductsManager = ({ products, setProducts, loading, setLoading, refreshDa
     "Monitor",
   ];
 
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate file type
+      const allowedTypes = [
+        "image/jpeg",
+        "image/jpg",
+        "image/png",
+        "image/gif",
+        "image/webp",
+      ];
+      if (!allowedTypes.includes(file.type)) {
+        alert("Please select a valid image file (JPEG, JPG, PNG, GIF, WEBP)");
+        return;
+      }
+
+      // Validate file size (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert("File size must be less than 5MB");
+        return;
+      }
+
+      setProductForm({ ...productForm, image: file });
+
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleProductSubmit = async (e) => {
     e.preventDefault();
     try {
       setLoading(true);
 
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append("name", productForm.name);
+      formData.append("category", productForm.category);
+      formData.append("brand", productForm.brand);
+      formData.append("model", productForm.model);
+      formData.append("price", productForm.price);
+      formData.append("stock", productForm.stock);
+      formData.append("description", productForm.description);
+      formData.append("featured", false);
+
+      // Only append image if a new file is selected
+      if (productForm.image && productForm.image instanceof File) {
+        formData.append("image", productForm.image);
+      }
+
+      let response;
       if (editingProduct) {
-        const response = await api.put(
-          `/products/${editingProduct._id}`,
-          productForm
-        );
+        response = await api.put(`/products/${editingProduct._id}`, formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
         if (response.data.success) {
           setProducts(
             products.map((p) =>
@@ -46,7 +104,11 @@ const ProductsManager = ({ products, setProducts, loading, setLoading, refreshDa
           alert("Product updated successfully!");
         }
       } else {
-        const response = await api.post("/products", productForm);
+        response = await api.post("/products", formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
         if (response.data.success) {
           setProducts([...products, response.data.data]);
           alert("Product added successfully!");
@@ -72,9 +134,16 @@ const ProductsManager = ({ products, setProducts, loading, setLoading, refreshDa
       price: "",
       stock: "",
       description: "",
-      image: "",
+      image: null,
     });
+    setImagePreview(null);
     setEditingProduct(null);
+
+    // Reset file input
+    const fileInput = document.getElementById("image-upload");
+    if (fileInput) {
+      fileInput.value = "";
+    }
   };
 
   const handleEditProduct = (product) => {
@@ -86,14 +155,28 @@ const ProductsManager = ({ products, setProducts, loading, setLoading, refreshDa
       price: product.price.toString(),
       stock: product.stock.toString(),
       description: product.description,
-      image: product.image,
+      image: null, // Don't set the file, just show current image
     });
+
+    // Set preview to current product image
+    if (product.image) {
+      const imageUrl = product.image.startsWith("http")
+        ? product.image
+        : `${import.meta.env.VITE_API_URL || "http://localhost:5000"}${
+            product.image
+          }`;
+      setImagePreview(imageUrl);
+    } else {
+      setImagePreview(null);
+    }
+
     setEditingProduct(product);
   };
 
   const handleDeleteProduct = async (productId) => {
     if (window.confirm("Are you sure you want to delete this product?")) {
       try {
+        setLoading(true);
         await api.delete(`/products/${productId}`);
         setProducts(products.filter((p) => p._id !== productId));
         alert("Product deleted successfully!");
@@ -101,6 +184,8 @@ const ProductsManager = ({ products, setProducts, loading, setLoading, refreshDa
       } catch (error) {
         console.error("Error deleting product:", error);
         alert("Error deleting product");
+      } finally {
+        setLoading(false);
       }
     }
   };
@@ -190,15 +275,36 @@ const ProductsManager = ({ products, setProducts, loading, setLoading, refreshDa
             min="0"
           />
 
-          <input
-            type="url"
-            placeholder="Image URL"
-            value={productForm.image}
-            onChange={(e) =>
-              setProductForm({ ...productForm, image: e.target.value })
-            }
-            className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+          {/* Image Upload */}
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Product Image
+            </label>
+            <input
+              id="image-upload"
+              type="file"
+              accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+              onChange={handleImageChange}
+              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Supported formats: JPEG, JPG, PNG, GIF, WEBP. Max size: 5MB
+            </p>
+
+            {/* Image Preview */}
+            {imagePreview && (
+              <div className="mt-3">
+                <p className="text-sm font-medium text-gray-700 mb-2">
+                  Preview:
+                </p>
+                <img
+                  src={imagePreview}
+                  alt="Preview"
+                  className="h-32 w-32 object-cover rounded-md border border-gray-200"
+                />
+              </div>
+            )}
+          </div>
 
           <textarea
             placeholder="Description"
@@ -208,6 +314,7 @@ const ProductsManager = ({ products, setProducts, loading, setLoading, refreshDa
             }
             className="md:col-span-2 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             rows="3"
+            required
           />
 
           <div className="md:col-span-2 flex space-x-4">
@@ -265,9 +372,21 @@ const ProductsManager = ({ products, setProducts, loading, setLoading, refreshDa
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <img
-                          src={product.image || "/placeholder-image.jpg"}
+                          src={
+                            product.image?.startsWith("http")
+                              ? product.image
+                              : product.image?.startsWith("/uploads")
+                              ? `${
+                                  import.meta.env.VITE_API_URL ||
+                                  "http://localhost:5000"
+                                }${product.image}`
+                              : "/placeholder-image.jpg"
+                          }
                           alt={product.name}
                           className="h-10 w-10 rounded-lg object-cover mr-3"
+                          onError={(e) => {
+                            e.target.src = "/placeholder-image.jpg";
+                          }}
                         />
                         <div>
                           <div className="text-sm font-medium text-gray-900">

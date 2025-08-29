@@ -10,6 +10,7 @@ const Products = () => {
   const [error, setError] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalProducts, setTotalProducts] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [sortBy, setSortBy] = useState("name");
@@ -61,37 +62,19 @@ const Products = () => {
         params.append("category", selectedCategory);
       }
 
-      console.log("🔍 Fetching with params:", params.toString());
-      console.log(
-        "📡 Full URL will be:",
-        `${import.meta.env.VITE_API_URL}/api/products?${params.toString()}`
-      );
-
-      // FIXED: Changed from /api/products to /products since /api is in baseURL now
       const response = await api.get(`/products?${params.toString()}`);
 
-      // DEBUG LOGS - Add these to see what's happening
-      console.log("✅ Full API Response:", response);
-      console.log("📊 Response data:", response.data);
-      console.log("✔️ Success status:", response.data.success);
-      console.log("📦 Products array:", response.data.data?.products);
-      console.log("📈 Products length:", response.data.data?.products?.length);
-      console.log("🎯 First product:", response.data.data?.products?.[0]);
-      console.log("📄 Total pages:", response.data.data?.totalPages);
-
       if (response.data.success) {
-        const productsData = response.data.data.products;
-        console.log("🔄 Setting products to:", productsData);
+        const responseData = response.data.data;
+        const productsData = responseData.products || [];
+
         setProducts(productsData);
-        setTotalPages(response.data.data.totalPages);
+        setTotalPages(responseData.totalPages || 1);
+        setTotalProducts(responseData.total || productsData.length);
       } else {
-        console.error("❌ API returned success: false");
         setError("Failed to fetch products");
       }
     } catch (error) {
-      console.error("💥 Error fetching products:", error);
-      console.error("💥 Error response:", error.response);
-      console.error("💥 Error message:", error.message);
       setError(error.response?.data?.message || "Failed to fetch products");
     } finally {
       setLoading(false);
@@ -101,7 +84,6 @@ const Products = () => {
   const handleSearch = (e) => {
     e.preventDefault();
     setCurrentPage(1);
-    fetchProducts();
   };
 
   const handleCategoryChange = (category) => {
@@ -125,6 +107,8 @@ const Products = () => {
   };
 
   const renderPagination = () => {
+    if (totalPages <= 1) return null;
+
     const pages = [];
     const maxVisiblePages = 5;
     const startPage = Math.max(
@@ -133,6 +117,19 @@ const Products = () => {
     );
     const endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
 
+    // Previous button
+    pages.push(
+      <button
+        key="prev"
+        onClick={() => handlePageChange(currentPage - 1)}
+        disabled={currentPage === 1}
+        className="px-3 py-2 mx-1 bg-white border border-gray-300 text-gray-700 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        Previous
+      </button>
+    );
+
+    // First page if needed
     if (startPage > 1) {
       pages.push(
         <button
@@ -145,19 +142,20 @@ const Products = () => {
       );
       if (startPage > 2) {
         pages.push(
-          <span key="dots1" className="px-2">
+          <span key="dots1" className="px-2 text-gray-500">
             ...
           </span>
         );
       }
     }
 
+    // Page numbers
     for (let i = startPage; i <= endPage; i++) {
       pages.push(
         <button
           key={i}
           onClick={() => handlePageChange(i)}
-          className={`px-3 py-2 mx-1 border rounded ${
+          className={`px-3 py-2 mx-1 border rounded transition duration-200 ${
             currentPage === i
               ? "bg-blue-600 text-white border-blue-600"
               : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
@@ -168,10 +166,11 @@ const Products = () => {
       );
     }
 
+    // Last page if needed
     if (endPage < totalPages) {
       if (endPage < totalPages - 1) {
         pages.push(
-          <span key="dots2" className="px-2">
+          <span key="dots2" className="px-2 text-gray-500">
             ...
           </span>
         );
@@ -187,14 +186,24 @@ const Products = () => {
       );
     }
 
+    // Next button
+    pages.push(
+      <button
+        key="next"
+        onClick={() => handlePageChange(currentPage + 1)}
+        disabled={currentPage === totalPages}
+        className="px-3 py-2 mx-1 bg-white border border-gray-300 text-gray-700 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        Next
+      </button>
+    );
+
     return pages;
   };
 
-  // DEBUG LOGS for render
-  console.log("🎨 Rendering with products state:", products);
-  console.log("📏 Products array length:", products.length);
-  console.log("⏳ Loading state:", loading);
-  console.log("❌ Error state:", error);
+  // Calculate display info for current page
+  const startItem = (currentPage - 1) * productsPerPage + 1;
+  const endItem = Math.min(currentPage * productsPerPage, totalProducts);
 
   if (loading && currentPage === 1) {
     return <Loader />;
@@ -265,7 +274,7 @@ const Products = () => {
                 onClick={() => handleSortChange(option.value)}
                 className={`px-3 py-1 rounded text-sm transition duration-200 ${
                   sortBy === option.value
-                    ? "bg-blue-100 text-blue-800"
+                    ? "bg-blue-100 text-blue-800 font-medium"
                     : "text-gray-600 hover:text-blue-600"
                 }`}
               >
@@ -282,34 +291,36 @@ const Products = () => {
 
         {/* Active Filters */}
         {(searchTerm || selectedCategory) && (
-          <div className="bg-blue-50 p-4 rounded-lg mb-6">
+          <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg mb-6">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-sm font-medium text-blue-800">
                 Active filters:
               </span>
               {searchTerm && (
-                <span className="px-2 py-1 bg-blue-200 text-blue-800 rounded text-sm">
+                <span className="inline-flex items-center px-3 py-1 bg-blue-200 text-blue-800 rounded-full text-sm">
                   Search: "{searchTerm}"
                   <button
                     onClick={() => {
                       setSearchTerm("");
                       setCurrentPage(1);
                     }}
-                    className="ml-1 text-blue-600 hover:text-blue-800"
+                    className="ml-2 text-blue-600 hover:text-blue-800 font-bold"
+                    title="Remove search filter"
                   >
                     ×
                   </button>
                 </span>
               )}
               {selectedCategory && (
-                <span className="px-2 py-1 bg-blue-200 text-blue-800 rounded text-sm">
+                <span className="inline-flex items-center px-3 py-1 bg-blue-200 text-blue-800 rounded-full text-sm">
                   Category: {selectedCategory}
                   <button
                     onClick={() => {
                       setSelectedCategory("");
                       setCurrentPage(1);
                     }}
-                    className="ml-1 text-blue-600 hover:text-blue-800"
+                    className="ml-2 text-blue-600 hover:text-blue-800 font-bold"
+                    title="Remove category filter"
                   >
                     ×
                   </button>
@@ -321,7 +332,7 @@ const Products = () => {
                   setSelectedCategory("");
                   setCurrentPage(1);
                 }}
-                className="px-2 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+                className="px-3 py-1 bg-blue-600 text-white rounded-full text-sm hover:bg-blue-700 transition duration-200"
               >
                 Clear all
               </button>
@@ -331,25 +342,33 @@ const Products = () => {
 
         {/* Error Message */}
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
-            {error}
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-6">
+            <div className="flex items-center">
+              <span className="text-red-500 mr-2">⚠️</span>
+              {error}
+            </div>
           </div>
         )}
 
-        {/* Products Grid */}
+        {/* Loading State */}
         {loading ? (
-          <div className="flex justify-center py-8">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <div className="flex justify-center py-12">
+            <div className="flex flex-col items-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+              <p className="text-gray-600">Loading products...</p>
+            </div>
           </div>
         ) : products.length === 0 ? (
+          /* No Products Found */
           <div className="bg-white p-8 rounded-lg shadow-md text-center">
+            <div className="text-6xl mb-4">📦</div>
             <h2 className="text-2xl font-bold text-gray-800 mb-4">
               No Products Found
             </h2>
-            <p className="text-gray-600 mb-4">
+            <p className="text-gray-600 mb-6">
               {searchTerm || selectedCategory
-                ? "Try adjusting your search criteria or filters"
-                : "No products are available at the moment"}
+                ? "No products match your current search criteria. Try adjusting your filters or search term."
+                : "No products are available at the moment. Please check back later."}
             </p>
             {(searchTerm || selectedCategory) && (
               <button
@@ -358,25 +377,42 @@ const Products = () => {
                   setSelectedCategory("");
                   setCurrentPage(1);
                 }}
-                className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
+                className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition duration-200"
               >
                 View All Products
               </button>
             )}
-            {/* DEBUG INFO */}
-            <div className="mt-4 p-2 bg-gray-100 rounded text-left text-xs">
-              <p>
-                <strong>Debug Info:</strong>
-              </p>
-              <p>Products array length: {products.length}</p>
-              <p>Loading: {loading.toString()}</p>
-              <p>Error: {error || "none"}</p>
-              <p>Current page: {currentPage}</p>
-              <p>Total pages: {totalPages}</p>
-            </div>
           </div>
         ) : (
+          /* Products Display */
           <>
+            {/* Products Count Header */}
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-semibold text-gray-800">
+                {searchTerm || selectedCategory ? (
+                  <>
+                    Search Results
+                    {searchTerm && (
+                      <span className="text-blue-600"> for "{searchTerm}"</span>
+                    )}
+                    {selectedCategory && (
+                      <span className="text-blue-600">
+                        {" "}
+                        in {selectedCategory}
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  "All Products"
+                )}
+              </h2>
+              <div className="text-sm text-gray-600">
+                {totalProducts} {totalProducts === 1 ? "product" : "products"}{" "}
+                found
+              </div>
+            </div>
+
+            {/* Products Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-8">
               {products.map((product) => (
                 <ProductCard key={product._id} product={product} />
@@ -385,34 +421,32 @@ const Products = () => {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="flex justify-center items-center space-x-2">
-                <button
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  className="px-3 py-2 bg-white border border-gray-300 text-gray-700 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Previous
-                </button>
+              <div className="bg-white p-4 rounded-lg shadow-md">
+                <div className="flex flex-col items-center space-y-4">
+                  {/* Page Numbers */}
+                  <div className="flex justify-center items-center space-x-1">
+                    {renderPagination()}
+                  </div>
 
-                {renderPagination()}
-
-                <button
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                  className="px-3 py-2 bg-white border border-gray-300 text-gray-700 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Next
-                </button>
+                  {/* Results Info */}
+                  <div className="text-sm text-gray-600 text-center">
+                    Showing {startItem} to {endItem} of {totalProducts} products
+                    <span className="text-gray-500">
+                      {" "}
+                      (Page {currentPage} of {totalPages})
+                    </span>
+                  </div>
+                </div>
               </div>
             )}
 
-            {/* Results Info */}
-            <div className="text-center mt-4 text-gray-600">
-              Showing {(currentPage - 1) * productsPerPage + 1} to{" "}
-              {Math.min(currentPage * productsPerPage, products.length)} of{" "}
-              {products.length} products
-              {totalPages > 1 && ` (Page ${currentPage} of ${totalPages})`}
-            </div>
+            {/* Single page results info */}
+            {totalPages === 1 && totalProducts > 0 && (
+              <div className="text-center text-sm text-gray-600 mt-4">
+                Showing all {totalProducts}{" "}
+                {totalProducts === 1 ? "product" : "products"}
+              </div>
+            )}
           </>
         )}
       </div>
