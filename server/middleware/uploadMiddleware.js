@@ -2,20 +2,40 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 
-// Create uploads directory if it doesn't exist
-const uploadDir = "uploads/products";
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
+// Create uploads directories if they don't exist
+const productUploadDir = "uploads/products";
+const userUploadDir = "uploads/users";
+
+if (!fs.existsSync(productUploadDir)) {
+  fs.mkdirSync(productUploadDir, { recursive: true });
 }
 
-// Configure multer for local storage
-const storage = multer.diskStorage({
+if (!fs.existsSync(userUploadDir)) {
+  fs.mkdirSync(userUploadDir, { recursive: true });
+}
+
+// Configure multer for products
+const productStorage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, uploadDir);
+    cb(null, productUploadDir);
   },
   filename: function (req, file, cb) {
     // Generate unique filename: timestamp-originalname
     const uniqueName = `${Date.now()}-${Math.round(
+      Math.random() * 1e9
+    )}${path.extname(file.originalname)}`;
+    cb(null, uniqueName);
+  },
+});
+
+// Configure multer for user profiles
+const userStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, userUploadDir);
+  },
+  filename: function (req, file, cb) {
+    // Generate unique filename for user profiles
+    const uniqueName = `profile-${Date.now()}-${Math.round(
       Math.random() * 1e9
     )}${path.extname(file.originalname)}`;
     cb(null, uniqueName);
@@ -40,20 +60,44 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-// Configure multer
-const upload = multer({
-  storage: storage,
+// Configure multer for products
+const productUpload = multer({
+  storage: productStorage,
   limits: {
     fileSize: 5 * 1024 * 1024, // 5MB limit
   },
   fileFilter: fileFilter,
 });
 
-// Middleware for single image upload
-export const uploadSingle = upload.single("image");
+// Configure multer for user profiles
+const userUpload = multer({
+  storage: userStorage,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+  fileFilter: fileFilter,
+});
 
-// Middleware for multiple image uploads
-export const uploadMultiple = upload.array("images", 5); // Max 5 images
+// General upload (backwards compatibility)
+const upload = multer({
+  storage: userStorage, // Default to user storage
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+  fileFilter: fileFilter,
+});
+
+// Middleware for single product image upload
+export const uploadSingle = productUpload.single("image");
+
+// Middleware for multiple product image uploads
+export const uploadMultiple = productUpload.array("images", 5); // Max 5 images
+
+// Middleware for user profile picture upload
+export const uploadProfilePic = userUpload.single("profilePic");
+
+// General upload middleware (for backwards compatibility)
+export { upload };
 
 // Error handling middleware for multer
 export const handleUploadError = (err, req, res, next) => {

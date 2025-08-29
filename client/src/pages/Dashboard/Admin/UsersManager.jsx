@@ -1,6 +1,18 @@
 import React from "react";
+import { User } from "lucide-react";
 
 const UsersManager = ({ users, loading }) => {
+  const getProfilePicUrl = (user) => {
+    if (!user.profilePic) return null;
+
+    // Check if it's a Google image or local image
+    if (user.profilePic.startsWith("http")) {
+      return user.profilePic; // Google profile pic
+    } else {
+      return `${import.meta.env.VITE_API_URL}${user.profilePic}`; // Local image
+    }
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden">
       <div className="overflow-x-auto">
@@ -29,8 +41,37 @@ const UsersManager = ({ users, loading }) => {
               users.map((user) => (
                 <tr key={user._id}>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">
-                      {user.name}
+                    <div className="flex items-center">
+                      {/* Profile Picture */}
+                      <div className="flex-shrink-0 h-10 w-10">
+                        <div className="h-10 w-10 rounded-full border-2 border-gray-200 flex items-center justify-center overflow-hidden bg-gray-50">
+                          {getProfilePicUrl(user) ? (
+                            <img
+                              src={getProfilePicUrl(user)}
+                              alt={`${user.name}'s profile`}
+                              className="h-full w-full object-cover"
+                              onError={(e) => {
+                                e.target.style.display = "none";
+                                e.target.nextSibling.style.display = "flex";
+                              }}
+                            />
+                          ) : (
+                            <User className="h-6 w-6 text-gray-400" />
+                          )}
+                          {/* Fallback icon (hidden by default) */}
+                          <User className="h-6 w-6 text-gray-400 hidden" />
+                        </div>
+                      </div>
+
+                      {/* User Info */}
+                      <div className="ml-4">
+                        <div className="text-sm font-medium text-gray-900">
+                          {user.name}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          ID: {user._id.slice(-6)}
+                        </div>
+                      </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">

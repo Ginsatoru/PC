@@ -1,16 +1,16 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { useCart } from '../context/CartContext';
-import { 
-  FiShoppingCart, 
-  FiUser, 
-  FiMenu, 
-  FiX, 
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { useCart } from "../context/CartContext";
+import {
+  FiShoppingCart,
+  FiUser,
+  FiMenu,
+  FiX,
   FiSearch,
   FiLogOut,
   FiSettings,
-} from 'react-icons/fi';
+} from "react-icons/fi";
 
 const Navbar = () => {
   const { user, isAuthenticated, logout, isAdmin } = useAuth();
@@ -18,11 +18,12 @@ const Navbar = () => {
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [imageError, setImageError] = useState(false);
 
   const handleLogout = () => {
     logout();
-    navigate('/');
+    navigate("/");
     setIsUserMenuOpen(false);
   };
 
@@ -30,11 +31,44 @@ const Navbar = () => {
     e.preventDefault();
     if (searchQuery.trim()) {
       navigate(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
-      setSearchQuery('');
+      setSearchQuery("");
     }
   };
 
-  const categories = ['CPU', 'GPU', 'RAM', 'SSD', 'Motherboard', 'PSU', 'Case', 'Cooling'];
+  const getProfilePicUrl = () => {
+    if (user?.profilePic && !imageError) {
+      if (
+        user.profilePic.startsWith("http://") ||
+        user.profilePic.startsWith("https://")
+      ) {
+        return user.profilePic;
+      } else if (user.profilePic.startsWith("/")) {
+        return `${import.meta.env.VITE_API_URL}${user.profilePic}`;
+      } else {
+        return `${import.meta.env.VITE_API_URL}/${user.profilePic}`;
+      }
+    }
+    return null;
+  };
+
+  const handleImageError = () => {
+    setImageError(true);
+  };
+
+  const handleImageLoad = () => {
+    setImageError(false);
+  };
+
+  const categories = [
+    "CPU",
+    "GPU",
+    "RAM",
+    "SSD",
+    "Motherboard",
+    "PSU",
+    "Case",
+    "Cooling",
+  ];
 
   return (
     <nav className="bg-white shadow-lg border-b">
@@ -50,13 +84,19 @@ const Navbar = () => {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
-            <Link to="/" className="text-gray-700 hover:text-primary-600 transition-colors">
+            <Link
+              to="/"
+              className="text-gray-700 hover:text-primary-600 transition-colors"
+            >
               Home
             </Link>
-            <Link to="/products" className="text-gray-700 hover:text-primary-600 transition-colors">
+            <Link
+              to="/products"
+              className="text-gray-700 hover:text-primary-600 transition-colors"
+            >
               All Products
             </Link>
-            
+
             {/* Categories Dropdown */}
             <div className="relative group">
               <button className="text-gray-700 hover:text-primary-600 transition-colors flex items-center">
@@ -119,7 +159,21 @@ const Navbar = () => {
                   onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                   className="flex items-center space-x-2 text-gray-700 hover:text-primary-600 transition-colors"
                 >
-                  <FiUser className="w-6 h-6" />
+                  {/* Profile Picture or Default Icon */}
+                  <div className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center overflow-hidden bg-gray-50">
+                    {getProfilePicUrl() && !imageError ? (
+                      <img
+                        src={getProfilePicUrl()}
+                        alt="Profile"
+                        className="w-full h-full object-cover"
+                        onError={handleImageError}
+                        onLoad={handleImageLoad}
+                        crossOrigin="anonymous"
+                      />
+                    ) : (
+                      <FiUser className="w-4 h-4 text-gray-400" />
+                    )}
+                  </div>
                   <span className="hidden md:block">{user?.name}</span>
                 </button>
 
@@ -163,10 +217,7 @@ const Navbar = () => {
                 >
                   Login
                 </Link>
-                <Link
-                  to="/register"
-                  className="btn btn-primary"
-                >
+                <Link to="/register" className="btn btn-primary">
                   Register
                 </Link>
               </div>
@@ -177,7 +228,11 @@ const Navbar = () => {
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               className="md:hidden p-2 text-gray-700 hover:text-primary-600"
             >
-              {isMenuOpen ? <FiX className="w-6 h-6" /> : <FiMenu className="w-6 h-6" />}
+              {isMenuOpen ? (
+                <FiX className="w-6 h-6" />
+              ) : (
+                <FiMenu className="w-6 h-6" />
+              )}
             </button>
           </div>
         </div>
@@ -219,10 +274,12 @@ const Navbar = () => {
                 >
                   All Products
                 </Link>
-                
+
                 {/* Mobile Categories */}
                 <div className="space-y-2">
-                  <div className="text-sm font-medium text-gray-900">Categories:</div>
+                  <div className="text-sm font-medium text-gray-900">
+                    Categories:
+                  </div>
                   {categories.map((category) => (
                     <Link
                       key={category}

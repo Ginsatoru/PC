@@ -1,16 +1,19 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import { AuthContext } from "../../context/AuthContext";
 import api from "../../utils/api";
+import { Camera, User } from "lucide-react";
 
 const ProfileSection = () => {
   const { user, updateUser } = useContext(AuthContext);
   const [loading, setLoading] = useState(false);
+  const [profilePic, setProfilePic] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [imageError, setImageError] = useState(false);
 
   const [profileForm, setProfileForm] = useState({
     name: user?.name || "",
     email: user?.email || "",
     phone: user?.phone || "",
-    // Handle address as object
     address: {
       street: user?.address?.street || "",
       city: user?.address?.city || "",
@@ -26,10 +29,100 @@ const ProfileSection = () => {
     confirmPassword: "",
   });
 
+  // Refresh user data if old profile pic path is detected
+  useEffect(() => {
+    const refreshUserData = async () => {
+      try {
+        const response = await api.get("/auth/profile");
+        if (response.data.success) {
+          updateUser(response.data.user);
+          setImageError(false);
+        }
+      } catch (error) {
+        console.error("Error refreshing user data:", error);
+      }
+    };
+
+    if (
+      user?.profilePic &&
+      user.profilePic.includes("/uploads/profile-") &&
+      !user.profilePic.includes("/uploads/users/")
+    ) {
+      refreshUserData();
+    }
+  }, [user?.profilePic, updateUser]);
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const allowedTypes = [
+        "image/jpeg",
+        "image/jpg",
+        "image/png",
+        "image/gif",
+        "image/webp",
+      ];
+      if (!allowedTypes.includes(file.type)) {
+        alert("Please select a valid image file (JPEG, PNG, GIF, WebP)");
+        return;
+      }
+
+      if (file.size > 5 * 1024 * 1024) {
+        alert("Image must be less than 5MB");
+        return;
+      }
+
+      setProfilePic(file);
+      setImageError(false);
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        setPreviewUrl(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeImage = () => {
+    setProfilePic(null);
+    setPreviewUrl(null);
+    setImageError(false);
+    const fileInput = document.getElementById("profilePic");
+    if (fileInput) fileInput.value = "";
+  };
+
+  const getCurrentProfilePicUrl = () => {
+    if (previewUrl) {
+      return previewUrl;
+    }
+
+    if (user?.profilePic && !imageError) {
+      if (
+        user.profilePic.startsWith("http://") ||
+        user.profilePic.startsWith("https://")
+      ) {
+        return user.profilePic;
+      } else if (user.profilePic.startsWith("/")) {
+        return `${import.meta.env.VITE_API_URL}${user.profilePic}`;
+      } else {
+        return `${import.meta.env.VITE_API_URL}/${user.profilePic}`;
+      }
+    }
+
+    return null;
+  };
+
+  const handleImageError = () => {
+    setImageError(true);
+  };
+
+  const handleImageLoad = () => {
+    setImageError(false);
+  };
+
   const handleProfileUpdate = async (e) => {
     e.preventDefault();
 
-    // Clean up address data - remove empty fields
     const cleanedAddress = {
       street: profileForm.address.street?.trim() || "",
       city: profileForm.address.city?.trim() || "",
@@ -38,49 +131,43 @@ const ProfileSection = () => {
       country: profileForm.address.country?.trim() || "",
     };
 
-    const dataToSend = {
-      name: profileForm.name,
-      email: profileForm.email,
-      phone: profileForm.phone?.trim() || "",
-      address: cleanedAddress,
-    };
-
-    console.log("Profile form data (cleaned):", dataToSend);
-
     try {
       setLoading(true);
-      const response = await api.put("/auth/profile", dataToSend);
 
-      console.log("Full API response:", response);
-      console.log("Response data:", response.data);
-      console.log("Response status:", response.status);
+      const formDataToSend = new FormData();
+      formDataToSend.append("name", profileForm.name);
+      formDataToSend.append("email", profileForm.email);
+      formDataToSend.append("phone", profileForm.phone?.trim() || "");
+      formDataToSend.append("address", JSON.stringify(cleanedAddress));
 
-      // FIXED: Better response handling
+      if (profilePic) {
+        formDataToSend.append("profilePic", profilePic);
+      }
+
+      const response = await api.put("/auth/profile", formDataToSend, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
       if (response.status === 200 && response.data) {
         if (response.data.success) {
-          // Success case
-          console.log("Profile updated successfully!", response.data.user);
           updateUser(response.data.user);
+          setImageError(false);
           alert("Profile updated successfully!");
+
+          setProfilePic(null);
+          setPreviewUrl(null);
+          const fileInput = document.getElementById("profilePic");
+          if (fileInput) fileInput.value = "";
         } else {
-          // Backend returned success: false
-          console.error("Backend returned success: false", response.data);
           alert(response.data.message || "Profile update failed");
         }
       } else {
-        // Unexpected response
-        console.error("Unexpected response:", response);
         alert("Unexpected response from server");
       }
     } catch (error) {
-      console.error("Error updating profile:", error);
-      console.error("Error response:", error.response?.data);
-      console.error("Error status:", error.response?.status);
-      console.error("Error message:", error.message);
-
-      // FIXED: Better error handling
       if (error.response) {
-        // Server responded with error status
         const errorData = error.response.data;
         if (errorData?.errors && Array.isArray(errorData.errors)) {
           alert(`Validation errors: ${errorData.errors.join(", ")}`);
@@ -90,11 +177,8 @@ const ProfileSection = () => {
           alert(`Server error: ${error.response.status}`);
         }
       } else if (error.request) {
-        // Network error
-        console.error("Network error:", error.request);
         alert("Network error - please check your connection");
       } else {
-        // Other error
         alert(error.message || "An unexpected error occurred");
       }
     } finally {
@@ -131,7 +215,6 @@ const ProfileSection = () => {
         alert("Password updated successfully!");
       }
     } catch (error) {
-      console.error("Error updating password:", error);
       alert(error.response?.data?.message || "Error updating password");
     } finally {
       setLoading(false);
@@ -144,6 +227,62 @@ const ProfileSection = () => {
       <div className="bg-white p-6 rounded-lg shadow-md">
         <h3 className="text-lg font-semibold mb-4">Profile Information</h3>
         <form onSubmit={handleProfileUpdate} className="space-y-4">
+          {/* Profile Picture Section */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Profile Picture
+            </label>
+
+            <div className="flex items-center space-x-4">
+              {/* Current/Preview Image */}
+              <div className="w-20 h-20 rounded-full border-2 border-gray-300 flex items-center justify-center overflow-hidden bg-gray-50">
+                {getCurrentProfilePicUrl() && !imageError ? (
+                  <img
+                    src={getCurrentProfilePicUrl()}
+                    alt="Profile"
+                    className="w-full h-full object-cover"
+                    onError={handleImageError}
+                    onLoad={handleImageLoad}
+                    crossOrigin="anonymous"
+                  />
+                ) : (
+                  <User className="w-8 h-8 text-gray-400" />
+                )}
+              </div>
+
+              {/* Upload/Remove Buttons */}
+              <div className="flex flex-col space-y-2">
+                <label
+                  htmlFor="profilePic"
+                  className="cursor-pointer bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition-colors flex items-center gap-1"
+                >
+                  <Camera className="w-4 h-4" />
+                  Change Photo
+                </label>
+                <input
+                  id="profilePic"
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                  onChange={handleImageChange}
+                  className="hidden"
+                />
+                {(getCurrentProfilePicUrl() || previewUrl) && (
+                  <button
+                    type="button"
+                    onClick={removeImage}
+                    className="text-red-600 text-sm hover:text-red-700"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <p className="text-xs text-gray-500 mt-1">
+              Max size: 5MB. Supported: JPEG, PNG, GIF, WebP
+            </p>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Full Name *
@@ -189,7 +328,7 @@ const ProfileSection = () => {
             />
           </div>
 
-          {/* Structured Address Fields */}
+          {/* Address Fields */}
           <div className="space-y-3">
             <h4 className="text-md font-medium text-gray-700">Address</h4>
 

@@ -12,6 +12,9 @@ const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 export const registerUser = asyncHandler(async (req, res) => {
   const { name, email, password, role } = req.body;
 
+  // FIXED: Handle profile picture from file upload with correct path
+  const profilePic = req.file ? `/uploads/users/${req.file.filename}` : null;
+
   // Validation
   if (!name || !email || !password) {
     return res.status(400).json({
@@ -43,6 +46,7 @@ export const registerUser = asyncHandler(async (req, res) => {
     email,
     password,
     role: role || "customer",
+    profilePic,
   });
 
   if (user) {
@@ -268,6 +272,7 @@ export const getUserProfile = asyncHandler(async (req, res) => {
 export const updateUserProfile = asyncHandler(async (req, res) => {
   console.log("=== UPDATE PROFILE ENDPOINT HIT ===");
   console.log("Request body:", req.body);
+  console.log("Request file:", req.file);
   console.log("User ID from token:", req.user.id);
 
   try {
@@ -307,16 +312,26 @@ export const updateUserProfile = asyncHandler(async (req, res) => {
     user.name = req.body.name || user.name;
     user.email = req.body.email || user.email;
     user.phone = req.body.phone || user.phone;
-    user.profilePic = req.body.profilePic || user.profilePic;
+
+    // FIXED: Handle profile picture update with correct path
+    if (req.file) {
+      user.profilePic = `/uploads/users/${req.file.filename}`;
+      console.log("New profile pic path:", user.profilePic);
+    }
 
     // Handle structured address properly
     if (req.body.address) {
+      const addressData =
+        typeof req.body.address === "string"
+          ? JSON.parse(req.body.address)
+          : req.body.address;
+
       user.address = {
-        street: req.body.address.street || user.address?.street || "",
-        city: req.body.address.city || user.address?.city || "",
-        state: req.body.address.state || user.address?.state || "",
-        zipCode: req.body.address.zipCode || user.address?.zipCode || "",
-        country: req.body.address.country || user.address?.country || "",
+        street: addressData.street || user.address?.street || "",
+        city: addressData.city || user.address?.city || "",
+        state: addressData.state || user.address?.state || "",
+        zipCode: addressData.zipCode || user.address?.zipCode || "",
+        country: addressData.country || user.address?.country || "",
       };
     }
 
