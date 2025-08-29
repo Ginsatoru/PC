@@ -173,3 +173,6 @@ pc-part-shop/
 Build a functional MVP PC Part Shop web app with React + Vite frontend, local MongoDB backend, and backend API endpoint stored in .env. Focus on backend + functionality first, keep UI minimal with Tailwind as the base.
 
 I have created mern stack app with you in a previous chat in another model, and i got some error, below was what you just respond so please continue.
+
+
+skeleton UI loading style with rounded-xl
