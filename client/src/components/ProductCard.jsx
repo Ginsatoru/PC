@@ -1,9 +1,14 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
+import { useCart } from "../context/CartContext"; // Import useCart hook
 
 const ProductCard = ({ product }) => {
   const [imageError, setImageError] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
+  const [addingToCart, setAddingToCart] = useState(false);
+  
+  // Get addToCart function from context
+  const { addToCart } = useCart();
 
   // Construct full image URL
   const getImageUrl = (imagePath) => {
@@ -36,6 +41,23 @@ const ProductCard = ({ product }) => {
       style: "currency",
       currency: "USD",
     }).format(price);
+  };
+
+  // Add to cart handler
+  const handleAddToCart = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (product.stock === 0) return;
+    
+    setAddingToCart(true);
+    try {
+      await addToCart(product, 1); // Add 1 quantity by default
+    } catch (error) {
+      console.error("Error adding product to cart:", error);
+    } finally {
+      setAddingToCart(false);
+    }
   };
 
   return (
@@ -141,13 +163,25 @@ const ProductCard = ({ product }) => {
           </Link>
           {product.stock > 0 && (
             <button
-              className="bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700 transition duration-200 text-sm font-medium"
-              onClick={(e) => {
-                e.preventDefault();
-                // Add to cart functionality here
-              }}
+              className={`text-white py-2 px-4 rounded transition duration-200 text-sm font-medium ${
+                addingToCart 
+                  ? 'bg-gray-400 cursor-not-allowed' 
+                  : 'bg-green-600 hover:bg-green-700'
+              }`}
+              onClick={handleAddToCart}
+              disabled={addingToCart || product.stock === 0}
             >
-              Add to Cart
+              {addingToCart ? (
+                <span className="flex items-center justify-center">
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Adding...
+                </span>
+              ) : (
+                "Add to Cart"
+              )}
             </button>
           )}
         </div>

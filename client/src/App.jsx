@@ -34,7 +34,8 @@ function App() {
                 <Route path="/" element={<Home />} />
                 <Route path="/products" element={<Products />} />
                 <Route path="/category/:category" element={<Category />} />
-                <Route path="/product/:id" element={<ProductDetail />} />
+                {/* FIXED: Changed from /product/:id to /products/:id to match your links */}
+                <Route path="/products/:id" element={<ProductDetail />} />
                 <Route path="/cart" element={<Cart />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
