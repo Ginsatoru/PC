@@ -136,7 +136,7 @@ const Home = () => {
     <div className="min-h-screen bg-white dark:bg-gray-900 transition-colors duration-300">
       {/* Hero Section */}
       <section
-        className="relative text-white py-20 sm:py-24 lg:py-72 overflow-hidden"
+        className="relative text-white py-20 sm:py-24 lg:py-44 overflow-hidden"
         style={{
           backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url(${bannerImage})`,
           backgroundSize: 'cover',
