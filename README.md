@@ -76,6 +76,12 @@ PC/
 │       │   ├── ProductDetail.jsx
 │       │   ├── Cart.jsx
 │       │   ├── Checkout.jsx
+│       │   ├── Checkout/
+│       │   │   ├── Checkout.jsx
+│       │   │   ├── KHQRPayment.jsx
+│       │   │   ├── OrderSummary.jsx
+│       │   │   ├── ShippingForm.jsx
+│       │   │   └── SuccessScreen.jsx
 │       │   ├── Dashboard/
 │       │   │   ├── Admin/
 │       │   │   │   ├── AdminDashboard.jsx
@@ -103,6 +109,7 @@ PC/
 │           └── api.js
 │
 └── README.md
+
 ⚙️ Installation
 1️⃣ Clone the repository
 bash

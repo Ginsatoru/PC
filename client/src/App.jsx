@@ -9,7 +9,7 @@ import Products from "./pages/Products";
 import Category from "./pages/Category";
 import ProductDetail from "./pages/ProductDetail";
 import Cart from "./pages/Cart";
-import Checkout from "./pages/Checkout";
+import Checkout from "./pages/Checkout/Checkout";
 import Login from "./pages/Auth/Login";
 import Register from "./pages/Auth/Register";
 import UserDashboard from "./pages/Dashboard/UserDashboard";

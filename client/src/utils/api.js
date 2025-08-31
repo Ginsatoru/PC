@@ -73,7 +73,7 @@ export const authAPI = {
     return api.post("/auth/login", credentials);
   },
   register: (userData) => api.post("/auth/register", userData),
-  // NEW: Google login endpoint
+  // Google login endpoint
   googleLogin: (googleToken) =>
     api.post("/auth/google", { token: googleToken }),
   getProfile: () => api.get("/auth/profile"),
@@ -123,6 +123,38 @@ export const orderAPI = {
   getOrderStats: () => api.get("/orders/stats"),
 };
 
+// NEW: KHQR Payment API endpoints
+export const khqrAPI = {
+  // Generate KHQR payment for an order
+  generateKHQR: (orderId) => {
+    console.log("Generating KHQR for order:", orderId);
+    return api.post(`/orders/${orderId}/khqr/generate`);
+  },
+
+  // Check KHQR payment status
+  checkPaymentStatus: (orderId) => {
+    console.log("Checking payment status for order:", orderId);
+    return api.get(`/orders/${orderId}/khqr/status`);
+  },
+
+  // Get KHQR payment details
+  getKHQRDetails: (orderId) => {
+    console.log("Getting KHQR details for order:", orderId);
+    return api.get(`/orders/${orderId}/khqr`);
+  },
+
+  // Cancel KHQR payment (optional)
+  cancelKHQRPayment: (orderId) => {
+    console.log("Cancelling KHQR payment for order:", orderId);
+    return api.delete(`/orders/${orderId}/khqr`);
+  },
+
+  // Webhook handler (for backend use, but included for completeness)
+  handleWebhook: (webhookData) => {
+    return api.post("/khqr/webhook", webhookData);
+  },
+};
+
 export const handleApiError = (error) => {
   console.error("API Error:", error);
   return error.response?.data || { message: "An error occurred" };
@@ -135,12 +167,80 @@ export const formatPrice = (price) => {
   }).format(price);
 };
 
+// NEW: Format price in KHR (Cambodian Riel)
+export const formatPriceKHR = (price) => {
+  return new Intl.NumberFormat("km-KH", {
+    style: "currency",
+    currency: "KHR",
+    minimumFractionDigits: 0,
+  }).format(price);
+};
+
+// NEW: Convert USD to KHR (approximate rate - you should get this from an API)
+export const convertUSDToKHR = (usdAmount, exchangeRate = 4100) => {
+  return Math.round(usdAmount * exchangeRate);
+};
+
 export const formatDate = (date) => {
   return new Date(date).toLocaleDateString("en-US", {
     year: "numeric",
     month: "long",
     day: "numeric",
   });
+};
+
+// NEW: Format date and time for KHQR transactions
+export const formatDateTime = (date) => {
+  return new Date(date).toLocaleString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
+// NEW: Utility functions for KHQR integration
+export const khqrUtils = {
+  // Check if KHQR payment is expired
+  isPaymentExpired: (expiresAt) => {
+    return new Date() > new Date(expiresAt);
+  },
+
+  // Calculate time remaining for KHQR payment
+  getTimeRemaining: (expiresAt) => {
+    const now = new Date();
+    const expiry = new Date(expiresAt);
+    const diff = expiry - now;
+
+    if (diff <= 0) return { minutes: 0, seconds: 0, expired: true };
+
+    const minutes = Math.floor(diff / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+    return { minutes, seconds, expired: false };
+  },
+
+  // Format time remaining as string
+  formatTimeRemaining: (expiresAt) => {
+    const { minutes, seconds, expired } = khqrUtils.getTimeRemaining(expiresAt);
+
+    if (expired) return "Expired";
+
+    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+  },
+
+  // Get payment method display name
+  getPaymentMethodName: (method) => {
+    const methods = {
+      cash_on_delivery: "Cash on Delivery",
+      khqr: "KHQR Payment",
+      card: "Credit Card",
+      bank_transfer: "Bank Transfer",
+    };
+
+    return methods[method] || method;
+  },
 };
 
 export default api;
