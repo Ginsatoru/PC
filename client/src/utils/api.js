@@ -73,7 +73,6 @@ export const authAPI = {
     return api.post("/auth/login", credentials);
   },
   register: (userData) => api.post("/auth/register", userData),
-  // Google login endpoint
   googleLogin: (googleToken) =>
     api.post("/auth/google", { token: googleToken }),
   getProfile: () => api.get("/auth/profile"),
@@ -89,7 +88,6 @@ export const productAPI = {
   getBrands: () => api.get("/products/brands"),
   getProductById: (id) => api.get(`/products/${id}`),
   createProduct: (productData) => {
-    // Handle both FormData and regular objects
     const config =
       productData instanceof FormData
         ? { headers: { "Content-Type": "multipart/form-data" } }
@@ -97,7 +95,6 @@ export const productAPI = {
     return api.post("/products", productData, config);
   },
   updateProduct: (id, productData) => {
-    // Handle both FormData and regular objects
     const config =
       productData instanceof FormData
         ? { headers: { "Content-Type": "multipart/form-data" } }
@@ -123,12 +120,13 @@ export const orderAPI = {
   getOrderStats: () => api.get("/orders/stats"),
 };
 
-// NEW: KHQR Payment API endpoints
+// CORRECTED: KHQR Payment API endpoints (matching backend routes)
 export const khqrAPI = {
   // Generate KHQR payment for an order
-  generateKHQR: (orderId) => {
-    console.log("Generating KHQR for order:", orderId);
-    return api.post(`/orders/${orderId}/khqr/generate`);
+  generateKHQR: (orderId, amount = null) => {
+    console.log("Generating KHQR for order:", orderId, "amount:", amount);
+    const payload = amount ? { amount } : {};
+    return api.post(`/orders/${orderId}/khqr`, payload);
   },
 
   // Check KHQR payment status
@@ -137,19 +135,19 @@ export const khqrAPI = {
     return api.get(`/orders/${orderId}/khqr/status`);
   },
 
-  // Get KHQR payment details
+  // Get KHQR payment details (if you add this endpoint later)
   getKHQRDetails: (orderId) => {
     console.log("Getting KHQR details for order:", orderId);
-    return api.get(`/orders/${orderId}/khqr`);
+    return api.get(`/orders/${orderId}/khqr/details`);
   },
 
-  // Cancel KHQR payment (optional)
+  // Cancel KHQR payment (optional - if you implement this)
   cancelKHQRPayment: (orderId) => {
     console.log("Cancelling KHQR payment for order:", orderId);
     return api.delete(`/orders/${orderId}/khqr`);
   },
 
-  // Webhook handler (for backend use, but included for completeness)
+  // Webhook handler (for backend use)
   handleWebhook: (webhookData) => {
     return api.post("/khqr/webhook", webhookData);
   },
@@ -167,7 +165,7 @@ export const formatPrice = (price) => {
   }).format(price);
 };
 
-// NEW: Format price in KHR (Cambodian Riel)
+// Format price in KHR (Cambodian Riel)
 export const formatPriceKHR = (price) => {
   return new Intl.NumberFormat("km-KH", {
     style: "currency",
@@ -176,7 +174,7 @@ export const formatPriceKHR = (price) => {
   }).format(price);
 };
 
-// NEW: Convert USD to KHR (approximate rate - you should get this from an API)
+// Convert USD to KHR (you should get this from a live API)
 export const convertUSDToKHR = (usdAmount, exchangeRate = 4100) => {
   return Math.round(usdAmount * exchangeRate);
 };
@@ -189,7 +187,7 @@ export const formatDate = (date) => {
   });
 };
 
-// NEW: Format date and time for KHQR transactions
+// Format date and time for KHQR transactions
 export const formatDateTime = (date) => {
   return new Date(date).toLocaleString("en-US", {
     year: "numeric",
@@ -200,7 +198,7 @@ export const formatDateTime = (date) => {
   });
 };
 
-// NEW: Utility functions for KHQR integration
+// Utility functions for KHQR integration
 export const khqrUtils = {
   // Check if KHQR payment is expired
   isPaymentExpired: (expiresAt) => {
@@ -234,13 +232,38 @@ export const khqrUtils = {
   getPaymentMethodName: (method) => {
     const methods = {
       cash_on_delivery: "Cash on Delivery",
-      khqr: "KHQR Payment",
+      KHQR: "KHQR Payment",
       card: "Credit Card",
       bank_transfer: "Bank Transfer",
     };
 
     return methods[method] || method;
   },
+
+  // Validate KHQR response data
+  validateKHQRResponse: (response) => {
+    const required = ['qrString', 'md5Hash', 'expiresAt', 'amount'];
+    return required.every(field => response && response[field]);
+  },
+
+  // Handle KHQR errors with user-friendly messages
+  getKHQRErrorMessage: (error) => {
+    const errorMessages = {
+      'INSUFFICIENT_BALANCE': 'Insufficient balance in your account',
+      'INVALID_ACCOUNT': 'Invalid merchant account configuration',
+      'EXPIRED_QR': 'QR code has expired, please generate a new one',
+      'NETWORK_ERROR': 'Network connection problem, please try again',
+      'INVALID_AMOUNT': 'Invalid payment amount',
+      'MERCHANT_NOT_FOUND': 'Merchant account not found',
+    };
+
+    if (error?.response?.data?.error) {
+      const errorCode = error.response.data.error;
+      return errorMessages[errorCode] || error.response.data.message || 'Payment failed';
+    }
+
+    return error?.message || 'An unexpected error occurred';
+  }
 };
 
 export default api;

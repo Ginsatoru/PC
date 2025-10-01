@@ -1,4 +1,5 @@
 import express from "express";
+import { protect, admin } from "../middleware/authMiddleware.js";
 import {
   addOrderItems,
   getOrderById,
@@ -8,11 +9,14 @@ import {
   getMyOrders,
   getOrders,
   deleteOrder,
-  getOrderStats,
+} from "../controllers/orders/orderController.js";
+
+import { getOrderStats } from "../controllers/orders/orderStatsController.js";
+
+import {
   createOrderKHQR,
   checkKHQRStatus,
-} from "../controllers/orderController.js";
-import { protect, admin } from "../middleware/authMiddleware.js";
+} from "../controllers/orders/orderPaymentController.js";
 
 const router = express.Router();
 
